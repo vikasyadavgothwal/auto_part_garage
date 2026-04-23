@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/user_dashboard";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/garage_dashboard";
 const legacyBasePaths = ["/dashboard", "/dahboard"].filter(
   (path) => path !== basePath
 );

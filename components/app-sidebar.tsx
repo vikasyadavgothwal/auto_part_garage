@@ -40,7 +40,7 @@ export function AppSidebar() {
         <Link href={appRoutes.overview} className="block">
           <h2 className="text-xl font-bold">AutoPartsPro</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Garage Dashboard
+            Garage
           </p>
         </Link>
       </SidebarHeader>
