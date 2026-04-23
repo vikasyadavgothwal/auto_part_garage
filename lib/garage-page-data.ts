@@ -1,7 +1,11 @@
-type DashboardStatIconKey = "calendar" | "clock" | "star" | "checkCircle2"
-type DashboardStatusVariant = "warning" | "info"
+export type DashboardStatIconKey =
+  | "calendar"
+  | "clock"
+  | "star"
+  | "checkCircle2"
+export type DashboardStatusVariant = "warning" | "info"
 
-type DashboardPageData = {
+export type DashboardPageData = {
   title: string
   description: string
   stats: Array<{
@@ -42,13 +46,13 @@ type DashboardPageData = {
   }>
 }
 
-type ScheduleAppointment = {
+export type ScheduleAppointment = {
   customer: string
   service: string
   duration: string
 }
 
-type SchedulePageData = {
+export type SchedulePageData = {
   title: string
   description: string
   primaryActionLabel: string
@@ -68,14 +72,16 @@ type SchedulePageData = {
   }>
 }
 
-type BookingsPageData = {
+export type BookingStatIconKey = "calendar"
+
+export type BookingsPageData = {
   title: string
   description: string
   stats: Array<{
     title: string
     value: string
     valueClass: string
-    iconKey?: "calendar"
+    iconKey?: BookingStatIconKey
     showIcon: boolean
   }>
   bookings: Array<{
@@ -95,7 +101,7 @@ type BookingsPageData = {
   }
 }
 
-type ServicesPageData = {
+export type ServicesPageData = {
   title: string
   description: string
   primaryActionLabel: string
@@ -117,9 +123,9 @@ type ServicesPageData = {
   tips: string[]
 }
 
-type ReviewsStatIconKey = "star" | "messageSquare" | "thumbsUp"
+export type ReviewsStatIconKey = "star" | "messageSquare" | "thumbsUp"
 
-type ReviewsPageData = {
+export type ReviewsPageData = {
   title: string
   description: string
   stats: Array<{
