@@ -22,7 +22,7 @@ export default function SettingsPage() {
             <Label htmlFor="company-name">Company Name</Label>
             <Input
               id="company-name"
-              defaultValue="ABC Logistics"
+              defaultValue="ABC Garage"
               className="border-border bg-brand-surface"
             />
           </div>
