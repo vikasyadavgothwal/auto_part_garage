@@ -10,7 +10,7 @@ import { schedulePageData } from "@/lib/garage-page-data"
 
 export default function GarageSchedulePage() {
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-8">
       <ActionPageHeading
         title={schedulePageData.title}
         description={schedulePageData.description}
@@ -29,7 +29,7 @@ export default function GarageSchedulePage() {
       />
       <ScheduleLegendCard />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2">
         <ScheduleSettingsCard />
         <UpcomingTodayCard appointments={schedulePageData.upcomingToday} />
       </div>

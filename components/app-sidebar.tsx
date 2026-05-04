@@ -59,7 +59,7 @@ export function AppSidebar() {
                 <SidebarMenuButton
                   asChild
                   isActive={isActive}
-                  className={`h-auto rounded-lg px-4 py-3 transition-all ${
+                  className={`h-auto rounded-sm px-4 py-3 transition-all ${
                     isActive
                       ? "bg-primary text-primary-foreground hover:bg-primary"
                       : "text-muted-foreground hover:bg-muted"
@@ -85,7 +85,7 @@ export function AppSidebar() {
                 currentPath === appRoutes.settings ||
                 currentPath.startsWith(`${appRoutes.settings}/`)
               }
-              className={`h-auto rounded-lg px-4 py-3 transition-all ${
+              className={`h-auto rounded-sm px-4 py-3 transition-all ${
                 currentPath === appRoutes.settings ||
                 currentPath.startsWith(`${appRoutes.settings}/`)
                   ? "bg-primary text-primary-foreground hover:bg-primary"

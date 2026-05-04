@@ -18,10 +18,10 @@ import { NotificationPopup } from "@/components/notification-popup"
 export function DashboardHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-brand-panel backdrop-blur-sm">
-      <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-8">
+      <div className="flex h-16 min-w-0 items-center justify-between gap-4 px-4 lg:px-8">
         <SidebarTrigger className="text-brand-muted hover:bg-transparent hover:text-foreground lg:hidden" />
 
-        <div className="max-w-xl flex-1">
+        <div className="min-w-0 max-w-xl flex-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-muted" />
             <Input
@@ -32,7 +32,7 @@ export function DashboardHeader() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

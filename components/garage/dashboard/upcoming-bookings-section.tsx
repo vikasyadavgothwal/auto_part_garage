@@ -34,7 +34,7 @@ export function UpcomingBookingsSection({
         className="mb-4"
       />
 
-      <Card className="surface-card overflow-hidden">
+      <Card className="surface-card overflow-hidden py-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

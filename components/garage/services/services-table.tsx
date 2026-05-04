@@ -24,7 +24,7 @@ type ServicesTableProps = {
 
 export function ServicesTable({ services }: ServicesTableProps) {
   return (
-    <Card className="surface-card overflow-hidden">
+    <Card className="surface-card overflow-hidden py-0">
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
