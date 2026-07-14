@@ -16,6 +16,15 @@ export const isFirebaseAuthConfigured = () =>
 export const getFirebaseAuth = () =>
   getAuth(getApps().length ? getApp() : initializeApp(config))
 
+export const getFirebaseAuthDiagnostics = () => ({
+  origin: typeof window === "undefined" ? "server" : window.location.origin,
+  authDomain: config.authDomain ?? "",
+  projectId: config.projectId ?? "",
+  apiKeyHint: config.apiKey
+    ? `${config.apiKey.slice(0, 6)}...${config.apiKey.slice(-4)}`
+    : "",
+})
+
 export async function createFirebaseLoginPayload(email: string, password: string) {
   const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email, password)
   await reload(credential.user)

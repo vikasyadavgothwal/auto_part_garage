@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { authenticatedFetch } from "@/lib/auth/client"
 import {
+  getFirebaseAuthDiagnostics,
   getFirebaseAuth,
   isFirebaseAuthConfigured,
 } from "@/lib/auth/firebase-client"
@@ -104,6 +105,10 @@ const normalizeMobileValue = (value: string) => {
 }
 
 const getFirebasePhoneErrorMessage = (error: unknown) => {
+  const diagnostics = getFirebaseAuthDiagnostics()
+  const origin =
+    diagnostics.origin === "server" ? "this domain" : diagnostics.origin
+
   if (!(error instanceof FirebaseError)) {
     return error instanceof Error
       ? error.message
@@ -115,6 +120,8 @@ const getFirebasePhoneErrorMessage = (error: unknown) => {
     "auth/credential-already-in-use":
       "This mobile number is already linked to another account.",
     "auth/invalid-phone-number": "Enter a valid mobile number.",
+    "auth/invalid-app-credential":
+      `Phone verification is blocked for ${origin}. Add this domain in Firebase Auth Authorized domains and, if your Firebase API key is restricted, add ${origin}/* in Google Cloud API key HTTP referrers.`,
     "auth/invalid-verification-code": "The OTP is incorrect.",
     "auth/missing-verification-code": "Enter the OTP.",
     "auth/operation-not-allowed":
@@ -124,6 +131,19 @@ const getFirebasePhoneErrorMessage = (error: unknown) => {
   }
 
   return messages[error.code] ?? "Unable to verify mobile number"
+}
+
+const logFirebasePhoneError = (error: unknown) => {
+  if (
+    error instanceof FirebaseError &&
+    error.code === "auth/invalid-app-credential"
+  ) {
+    console.warn("Firebase phone auth app verifier rejected", {
+      ...getFirebaseAuthDiagnostics(),
+      code: error.code,
+      message: error.message,
+    })
+  }
 }
 
 export function SettingsManager({ profile }: SettingsManagerProps) {
@@ -168,11 +188,14 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     }
   }, [])
 
-  const getRecaptchaVerifier = () => {
-    if (recaptchaVerifier.current) {
-      return recaptchaVerifier.current
-    }
+  const clearRecaptchaVerifier = () => {
+    recaptchaVerifier.current?.clear()
+    recaptchaVerifier.current = null
+    document.getElementById("garage-mobile-recaptcha")?.replaceChildren()
+  }
 
+  const getRecaptchaVerifier = () => {
+    clearRecaptchaVerifier()
     const verifier = new RecaptchaVerifier(
       getFirebaseAuth(),
       "garage-mobile-recaptcha",
@@ -364,14 +387,21 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       const auth = getFirebaseAuth()
 
       const provider = new PhoneAuthProvider(auth)
-      const verificationId = await provider.verifyPhoneNumber(
-        normalizedFormMobile,
-        getRecaptchaVerifier(),
-      )
+      let verificationId: string
+      try {
+        verificationId = await provider.verifyPhoneNumber(
+          normalizedFormMobile,
+          getRecaptchaVerifier(),
+        )
+      } catch (error) {
+        clearRecaptchaVerifier()
+        throw error
+      }
       setMobileVerificationId(verificationId)
       setOtp("")
       setMessage("OTP sent by Firebase")
     } catch (sendError) {
+      logFirebasePhoneError(sendError)
       setError(getFirebasePhoneErrorMessage(sendError))
     } finally {
       setIsSendingOtp(false)
