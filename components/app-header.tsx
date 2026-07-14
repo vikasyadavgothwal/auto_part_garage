@@ -23,6 +23,7 @@ import { appRoutes } from "@/lib/routes"
 export function DashboardHeader({ user }: { user: DashboardUser }) {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const displayName = getDashboardUserName(user)
 
   const handleLogout = async () => {
@@ -59,10 +60,11 @@ export function DashboardHeader({ user }: { user: DashboardUser }) {
                 className="relative text-brand-muted hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground"
               >
                 <Bell className="h-6 w-6" />
-                <span
-                  aria-hidden="true"
-                  className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full border border-brand-panel bg-primary"
-                />
+                {unreadNotifications > 0 ? (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-brand-panel bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+                    {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                  </span>
+                ) : null}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -70,7 +72,7 @@ export function DashboardHeader({ user }: { user: DashboardUser }) {
               sideOffset={12}
               className="w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-sm border border-border bg-brand-panel p-0 shadow-2xl shadow-black/40"
             >
-              <NotificationPopup />
+              <NotificationPopup onUnreadChange={setUnreadNotifications} />
             </DropdownMenuContent>
           </DropdownMenu>
 
