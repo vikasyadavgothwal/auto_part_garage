@@ -14,7 +14,7 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3003/garage_dashboard](http://localhost:3003/garage_dashboard) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
@@ -98,7 +98,6 @@ Runtime note: dev/start use port 3003.
 - Firebase login succeeds when configured, and auth cookies are set/cleared through backend login/logout/refresh routes
 - Backend URL points to the admin API server, not the garage frontend
 - Do not mix fleet or supplier logic into garage workflows
-- Confirm package name mismatch before publishing: package.json currently says fleet_dashboard
 - Run lint/build for this app before deployment.
 - Re-check affected API, auth, database, and env contracts in connected apps.
 

@@ -50,7 +50,6 @@ Garage partner dashboard for bookings, services, schedule, reviews, settings, an
 - Firebase login succeeds when configured, and auth cookies are set/cleared through backend login/logout/refresh routes
 - Backend URL points to the admin API server, not the garage frontend
 - Do not mix fleet or supplier logic into garage workflows
-- Confirm package name mismatch before publishing: package.json currently says fleet_dashboard
 - Run the commands documented in this app README when relevant.
 - Update project root `docs/AI_HANDOFF.md` after major changes.
 
