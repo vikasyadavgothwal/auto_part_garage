@@ -5,9 +5,13 @@ import { RecentReviewsCard } from "@/components/garage/dashboard/recent-reviews-
 import { TodaysScheduleSection } from "@/components/garage/dashboard/todays-schedule-section"
 import { UpcomingBookingsSection } from "@/components/garage/dashboard/upcoming-bookings-section"
 import { PageHeading } from "@/components/garage/shared/page-heading"
-import { dashboardPageData } from "@/lib/garage-page-data"
+import { getGarageDashboardData } from "@/lib/garage-dashboard.server"
 
-export default function GarageDashboardPage() {
+export const dynamic = "force-dynamic"
+
+export default async function GarageDashboardPage() {
+  const dashboardPageData = await getGarageDashboardData()
+
   return (
     <div className="space-y-8">
       <PageHeading

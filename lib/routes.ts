@@ -1,4 +1,4 @@
-const DEFAULT_BASE_PATH = "/fleet"
+const DEFAULT_BASE_PATH = "/garage_dashboard"
 
 function normalizeBasePath(value?: string) {
   if (!value) {
@@ -23,7 +23,17 @@ export const appRoutes = {
   services: "/services",
   reviews: "/reviews",
   settings: "/settings",
+  login: "/login",
 } as const
+
+export function appPath(path: string) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  return normalizedPath === appBasePath || normalizedPath.startsWith(`${appBasePath}/`)
+    ? normalizedPath
+    : `${appBasePath}${normalizedPath === "/" ? "" : normalizedPath}`
+}
+
+export const withBasePath = appPath
 
 export function stripBasePath(pathname: string | null) {
   if (!pathname) {

@@ -51,6 +51,13 @@ export function TodaysScheduleSection({
             </TableHeader>
 
             <TableBody>
+              {schedule.length === 0 ? (
+                <TableRow className={tableRowClass}>
+                  <TableCell className="px-6 py-8 text-center text-sm text-brand-muted" colSpan={7}>
+                    No bookings scheduled for today.
+                  </TableCell>
+                </TableRow>
+              ) : null}
               {schedule.map((item) => (
                 <TableRow key={item.bookingId} className={tableRowClass}>
                   <TableCell className={tableCellMutedClass}>

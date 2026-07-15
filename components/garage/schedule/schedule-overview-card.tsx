@@ -1,4 +1,5 @@
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react"
+import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -7,22 +8,29 @@ import type { SchedulePageData } from "@/lib/garage-page-data"
 type ScheduleOverviewCardProps = {
   weekLabel: SchedulePageData["weekLabel"]
   weekStats: SchedulePageData["weekStats"]
+  previousWeekHref: string
+  nextWeekHref: string
 }
 
 export function ScheduleOverviewCard({
   weekLabel,
   weekStats,
+  previousWeekHref,
+  nextWeekHref,
 }: ScheduleOverviewCardProps) {
   return (
     <Card className="surface-card">
       <CardContent className="p-6">
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <Button
+            asChild
             variant="outline"
             size="icon"
             className="border-border bg-brand-panel-strong text-foreground hover:bg-primary hover:text-primary-foreground"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <Link href={previousWeekHref} aria-label="Show previous week">
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
           </Button>
 
           <div className="flex items-center gap-3">
@@ -33,11 +41,14 @@ export function ScheduleOverviewCard({
           </div>
 
           <Button
+            asChild
             variant="outline"
             size="icon"
             className="border-border bg-brand-panel-strong text-foreground hover:bg-primary hover:text-primary-foreground"
           >
-            <ChevronRight className="h-5 w-5" />
+            <Link href={nextWeekHref} aria-label="Show next week">
+              <ChevronRight className="h-5 w-5" />
+            </Link>
           </Button>
         </div>
 

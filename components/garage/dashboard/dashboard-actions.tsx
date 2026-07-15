@@ -22,8 +22,8 @@ export function DashboardActions() {
         </div>
       </Link>
 
-      <button
-        type="button"
+      <Link
+        href={appRoutes.services}
         className="flex items-center gap-4 rounded-xl border border-border bg-card p-6 text-left transition-all hover:border-primary"
       >
         <div className="rounded-lg border border-primary/20 bg-primary/10 p-3">
@@ -32,13 +32,13 @@ export function DashboardActions() {
 
         <div>
           <div className="text-lg font-bold text-foreground">
-            Block Time Slot
+            Manage Services
           </div>
           <div className="text-sm text-brand-muted">
-            Mark unavailable hours
+            Update your service catalog
           </div>
         </div>
-      </button>
+      </Link>
     </div>
   )
 }
