@@ -33,7 +33,6 @@ export type GarageServiceFormValues = {
   category: string
   durationMinutes: number
   price: number
-  bookingsCount: number
   status: GarageServiceStatus
 }
 

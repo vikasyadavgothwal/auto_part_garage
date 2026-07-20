@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { FirebaseError } from "firebase/app"
-import { Eye, EyeOff, ShieldCheck, Truck } from "lucide-react"
+import { Eye, EyeOff, ShieldCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -65,37 +65,9 @@ export function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-brand-surface px-4 py-10">
-      <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[1.1fr_420px]">
-        <section className="rounded-3xl border border-border bg-brand-elevated p-8 text-foreground lg:p-10">
-          <div className="surface-pill mb-6 bg-primary/15 text-brand-primary-soft">
-            <Truck className="size-4" />
-            Garage Operations Control
-          </div>
-          <h1 className="max-w-xl text-4xl font-semibold tracking-tight">
-            Keep service bookings, schedules, and customer activity in one dashboard.
-          </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-brand-muted">
-            AutoPartsPro gives garage teams a secure workspace for bookings, services,
-            reviews, and daily operations.
-          </p>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-brand-panel p-4">
-              <div className="text-2xl font-semibold">128</div>
-              <p className="mt-1 text-sm text-brand-muted">Bookings managed</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-brand-panel p-4">
-              <div className="text-2xl font-semibold">24</div>
-              <p className="mt-1 text-sm text-brand-muted">Services scheduled</p>
-            </div>
-            <div className="rounded-2xl border border-border bg-brand-panel p-4">
-              <div className="text-2xl font-semibold">96.2%</div>
-              <p className="mt-1 text-sm text-brand-muted">Customer satisfaction</p>
-            </div>
-          </div>
-        </section>
-
-        <Card className="border border-border bg-brand-elevated text-foreground ring-0">
+    <div className="flex min-h-svh items-center justify-center bg-brand-surface px-4 py-8 sm:py-10">
+      <div className="w-full max-w-md">
+        <Card className="border border-border bg-brand-elevated text-foreground shadow-2xl shadow-black/20 ring-0">
           <CardHeader className="space-y-2">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-brand-panel px-3 py-1 text-xs text-brand-muted">
               <ShieldCheck className="size-3.5" />
