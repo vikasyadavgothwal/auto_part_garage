@@ -49,7 +49,6 @@ const emptyForm: GarageServiceFormValues = {
   category: "",
   durationMinutes: 30,
   price: 0,
-  bookingsCount: 0,
   status: "active",
 }
 
@@ -60,7 +59,6 @@ const formFromService = (
   category: service.category,
   durationMinutes: service.durationMinutes,
   price: service.priceValue,
-  bookingsCount: service.bookingsCount,
   status: service.statusValue,
 })
 
@@ -283,21 +281,6 @@ export function ServicesManager({
                   step="0.01"
                   value={form.price}
                   onChange={(event) => updateForm("price", event.target.value)}
-                  className="h-11 border-border bg-brand-surface"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="service-bookings">Bookings</Label>
-                <Input
-                  id="service-bookings"
-                  type="number"
-                  min="0"
-                  value={form.bookingsCount}
-                  onChange={(event) =>
-                    updateForm("bookingsCount", event.target.value)
-                  }
                   className="h-11 border-border bg-brand-surface"
                   required
                 />
