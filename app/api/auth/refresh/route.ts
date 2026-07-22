@@ -39,7 +39,11 @@ export async function POST(request: NextRequest) { return (await refresh(request
 
 export async function GET(request: NextRequest) {
   const result = await refresh(request)
-  const response = NextResponse.redirect(new URL(appPath(result.ok ? appRoutes.overview : appRoutes.login), request.url))
+  const requestedReturn = request.nextUrl.searchParams.get("returnTo")
+  const safeReturn = requestedReturn?.startsWith("/") && !requestedReturn.startsWith("//") && !requestedReturn.includes("/api/auth/")
+    ? requestedReturn
+    : appPath(appRoutes.overview)
+  const response = NextResponse.redirect(new URL(result.ok ? safeReturn : appPath(appRoutes.login), request.url))
   getSetCookieHeaders(result.response.headers).forEach((value) => response.headers.append("set-cookie", value))
   return response
 }

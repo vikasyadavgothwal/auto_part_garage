@@ -63,11 +63,16 @@ Detected or documented variables:
 - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
 - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_FIREBASE_VAPID_KEY`
 - `USER_ACCESS_COOKIE_NAME`
 - `USER_REFRESH_COOKIE_NAME`
 - `NEXT_PUBLIC_BASE_PATH`
 - `GARAGE_EMAIL_VERIFICATION_WEBHOOK_URL` configured on the admin/backend app
 - `GARAGE_SMS_OTP_WEBHOOK_URL` configured on the admin/backend app
+
+Firebase push notifications require `NEXT_PUBLIC_FIREBASE_VAPID_KEY` plus the
+Firebase web config. The dashboard registers the browser token only after login
+and browser notification permission.
 
 ### Run, Build, and Test Commands
 

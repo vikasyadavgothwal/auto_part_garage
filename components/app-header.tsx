@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { NotificationLiveListener } from "@/components/notification-live-listener"
 import { NotificationPopup } from "@/components/notification-popup"
 import { logoutGarage } from "@/lib/auth/client"
 import { getDashboardUserName, type DashboardUser } from "@/lib/auth/types"
@@ -35,6 +36,7 @@ export function DashboardHeader({ user }: { user: DashboardUser }) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-brand-panel backdrop-blur-sm">
+      <NotificationLiveListener onUnreadChange={setUnreadNotifications} />
       <div className="flex h-16 min-w-0 items-center justify-between gap-4 px-4 lg:px-8">
         <SidebarTrigger className="text-brand-muted hover:bg-transparent hover:text-foreground lg:hidden" />
 
