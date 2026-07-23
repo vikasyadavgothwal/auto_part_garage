@@ -23,12 +23,12 @@ export type GarageBookingRecord = {
   vehicleModel: string | null
   vehicleVin: string | null
   notes: string | null
-  bookingDate: string
-  bookingTime: string
+  bookingDate: string | null
+  bookingTime: string | null
   durationMinutes: number
   price: number
   currency: string
-  status: "pending" | "confirmed" | "completed" | "cancelled"
+  status: "pending" | "pending_slot_selection" | "confirmed" | "completed" | "cancelled"
   createdAt: string
   updatedAt: string
 }
@@ -46,20 +46,27 @@ const statusClass = (status: GarageBookingRecord["status"]) => {
   if (status === "cancelled") {
     return "border-primary/20 bg-primary/10 text-primary hover:bg-primary/10"
   }
+  if (status === "pending_slot_selection") {
+    return "border-brand-warning/20 bg-brand-warning/10 text-brand-warning hover:bg-brand-warning/10"
+  }
   return "border-brand-success/20 bg-brand-success/10 text-brand-success hover:bg-brand-success/10"
 }
 
 const titleCase = (value: string) =>
-  value.slice(0, 1).toUpperCase() + value.slice(1)
+  value === "pending_slot_selection"
+    ? "Awaiting Slot Selection"
+    : value.slice(0, 1).toUpperCase() + value.slice(1)
 
 const asDate = (value: string) => new Date(`${value}T12:00:00`)
 
-const formatDate = (value: string) =>
-  asDate(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
+const formatDate = (value: string | null) =>
+  value
+    ? asDate(value).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "Not scheduled"
 
 const formatVehicle = (booking: GarageBookingRecord) =>
   [booking.vehicleYear, booking.vehicleMake, booking.vehicleModel]
@@ -83,6 +90,7 @@ const weekRange = (weekOffset = 0) => {
 }
 
 const inWeek = (booking: GarageBookingRecord, weekOffset = 0) => {
+  if (!booking.bookingDate) return false
   const date = asDate(booking.bookingDate)
   const { monday, sunday } = weekRange(weekOffset)
   return date >= monday && date <= sunday
@@ -119,7 +127,10 @@ export function buildBookingsPageData(
   const today = todayKey()
   const todayBookings = bookings.filter((booking) => booking.bookingDate === today)
   const weekBookings = bookings.filter(inCurrentWeek)
-  const pending = bookings.filter((booking) => booking.status === "pending")
+  const pending = bookings.filter(
+    (booking) =>
+      booking.status === "pending" || booking.status === "pending_slot_selection",
+  )
   const revenue = bookings.reduce((total, booking) => total + booking.price, 0)
 
   return {
@@ -155,7 +166,7 @@ export function buildBookingsPageData(
       id: booking.publicId,
       backendId: booking.id,
       date: formatDate(booking.bookingDate),
-      time: booking.bookingTime,
+      time: booking.bookingTime ?? "Awaiting user",
       customer: booking.customerName,
       customerEmail: booking.customerEmail,
       customerPhone: booking.customerPhone,
@@ -176,17 +187,23 @@ export function buildSchedulePageData(
   bookings: GarageBookingRecord[],
   weekOffset = 0,
 ): SchedulePageData {
-  const weekBookings = bookings.filter((booking) => inWeek(booking, weekOffset))
+  const scheduledBookings = bookings.filter(
+    (booking) => booking.bookingDate && booking.bookingTime,
+  )
+  const weekBookings = scheduledBookings.filter((booking) => inWeek(booking, weekOffset))
   const todayBookings = bookings.filter(
     (booking) => booking.bookingDate === todayKey(),
   )
-  const appointmentTimes = weekBookings.map((booking) => booking.bookingTime)
+  const appointmentTimes = weekBookings
+    .map((booking) => booking.bookingTime)
+    .filter((time): time is string => Boolean(time))
   const timeSlots = sortTimes(
     Array.from(new Set([...schedulePageData.timeSlots, ...appointmentTimes])),
   )
   const appointments: SchedulePageData["appointments"] = {}
 
   for (const booking of weekBookings) {
+    if (!booking.bookingDate || !booking.bookingTime) continue
     const day = dayName(booking.bookingDate)
     appointments[booking.bookingTime] = {
       ...(appointments[booking.bookingTime] ?? {}),
@@ -223,8 +240,8 @@ export function buildSchedulePageData(
     ],
     timeSlots,
     appointments,
-    upcomingToday: todayBookings.map((booking) => ({
-      time: booking.bookingTime,
+    upcomingToday: todayBookings.filter((booking) => booking.bookingTime).map((booking) => ({
+      time: booking.bookingTime ?? "",
       duration: `${booking.durationMinutes} min`,
       customer: booking.customerName,
       service: booking.serviceName,

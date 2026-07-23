@@ -38,12 +38,14 @@ const formatReviewDate = (value: string) =>
   })
 
 const isCurrentMonth = (booking: GarageBookingRecord) => {
+  if (!booking.bookingDate) return false
   const date = asDate(booking.bookingDate)
   const now = new Date()
   return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
 }
 
 const isWithinLast30Days = (booking: GarageBookingRecord) => {
+  if (!booking.bookingDate) return false
   const date = asDate(booking.bookingDate).getTime()
   const today = asDate(todayKey()).getTime()
   const thirtyDaysAgo = today - 29 * 24 * 60 * 60 * 1000
@@ -57,8 +59,8 @@ const upcomingCutoffKey = () => {
 }
 
 const sortByAppointment = (a: GarageBookingRecord, b: GarageBookingRecord) =>
-  `${a.bookingDate} ${a.bookingTime}`.localeCompare(
-    `${b.bookingDate} ${b.bookingTime}`,
+  `${a.bookingDate ?? ""} ${a.bookingTime ?? ""}`.localeCompare(
+    `${b.bookingDate ?? ""} ${b.bookingTime ?? ""}`,
   )
 
 const mapScheduleStatus = (
@@ -68,6 +70,9 @@ const mapScheduleStatus = (
   "status" | "statusVariant"
 > => {
   if (status === "pending") {
+    return { status: "Pending", statusVariant: "warning" }
+  }
+  if (status === "pending_slot_selection") {
     return { status: "Pending", statusVariant: "warning" }
   }
   if (status === "completed") {
@@ -83,10 +88,18 @@ function buildOverviewData(
   const today = todayKey()
   const upcomingCutoff = upcomingCutoffKey()
   const activeBookings = bookings.filter((booking) => booking.status !== "cancelled")
-  const todayBookings = activeBookings
+  const scheduledBookings = activeBookings.filter(
+    (
+      booking,
+    ): booking is GarageBookingRecord & {
+      bookingDate: string
+      bookingTime: string
+    } => Boolean(booking.bookingDate && booking.bookingTime),
+  )
+  const todayBookings = scheduledBookings
     .filter((booking) => booking.bookingDate === today)
     .sort(sortByAppointment)
-  const upcomingBookings = activeBookings
+  const upcomingBookings = scheduledBookings
     .filter(
       (booking) =>
         booking.bookingDate > today && booking.bookingDate <= upcomingCutoff,
@@ -164,7 +177,7 @@ function buildOverviewData(
       },
     ],
     todaysSchedule: todayBookings.map((booking) => ({
-      time: booking.bookingTime,
+      time: booking.bookingTime ?? "",
       bookingId: booking.publicId,
       customer: booking.customerName,
       vehicle: formatVehicle(booking),
@@ -173,8 +186,8 @@ function buildOverviewData(
       ...mapScheduleStatus(booking.status),
     })),
     upcomingBookings: upcomingBookings.slice(0, 5).map((booking) => ({
-      date: formatDate(booking.bookingDate),
-      time: booking.bookingTime,
+      date: formatDate(booking.bookingDate ?? today),
+      time: booking.bookingTime ?? "",
       bookingId: booking.publicId,
       customer: booking.customerName,
       vehicle: formatVehicle(booking),

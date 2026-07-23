@@ -99,7 +99,12 @@ export type BookingsPageData = {
     notes?: string | null
     revenue: string
     status: string
-    rawStatus?: "pending" | "confirmed" | "completed" | "cancelled"
+    rawStatus?:
+      | "pending"
+      | "pending_slot_selection"
+      | "confirmed"
+      | "completed"
+      | "cancelled"
     statusClass: string
   }>
   calendarView: {
