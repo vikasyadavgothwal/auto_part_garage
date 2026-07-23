@@ -25,7 +25,7 @@ const helpfulLinks = [
   {
     title: "Fleet Dashboard",
     description: "Manage your fleet and procurement",
-    href: "/fleet/dashboard",
+    href: "/dashboard",
   },
 ];
 

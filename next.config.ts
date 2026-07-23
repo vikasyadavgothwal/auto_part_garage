@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "/garage_dashboard";
-const legacyBasePaths = ["/dashboard", "/dahboard"].filter(
-  (path) => path !== basePath
+const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim();
+const basePath = configuredBasePath || undefined;
+const dashboardBase = configuredBasePath || "";
+const legacyBasePaths = ["/garage_dashboard", "/dahboard"].filter(
+  (path) => path !== dashboardBase
 );
 const externalRedirect = {
   basePath: false as const,
@@ -10,23 +12,23 @@ const externalRedirect = {
 };
 
 const nextConfig: NextConfig = {
-  basePath,
+  ...(basePath ? { basePath } : {}),
   async redirects() {
     return [
       {
         source: "/",
-        destination: basePath,
+        destination: `${dashboardBase}/dashboard`,
         ...externalRedirect,
       },
       ...legacyBasePaths.flatMap((legacyPath) => [
         {
           source: legacyPath,
-          destination: basePath,
+          destination: `${dashboardBase}/dashboard`,
           ...externalRedirect,
         },
         {
           source: `${legacyPath}/:path*`,
-          destination: `${basePath}/:path*`,
+          destination: `${dashboardBase}/:path*`,
           ...externalRedirect,
         },
       ]),
