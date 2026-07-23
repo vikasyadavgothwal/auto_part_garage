@@ -6,13 +6,21 @@ export const GARAGE_ACCESS_COOKIE = "garage_access_token"
 export const GARAGE_REFRESH_COOKIE = "garage_refresh_token"
 
 const backendUrl = (path: string) =>
-  new URL(
-    path,
-    process.env.ADMIN_API_BASE_URL?.trim() ||
+  {
+    const baseUrl =
+      process.env.ADMIN_API_BASE_URL?.trim() ||
       process.env.BACKEND_URL?.trim() ||
       process.env.NEXT_PUBLIC_ADMIN_API_BASE_URL?.trim() ||
-      "http://localhost:3000",
-  )
+      (process.env.NODE_ENV === "production" ? "" : "http://localhost:3000")
+
+    if (!baseUrl) {
+      throw new Error(
+        "Missing backend API URL. Set ADMIN_API_BASE_URL, BACKEND_URL, or NEXT_PUBLIC_ADMIN_API_BASE_URL.",
+      )
+    }
+
+    return new URL(path, baseUrl)
+  }
 
 const parseCookieHeader = (header: string | null) => {
   const cookies = new Map<string, string>()

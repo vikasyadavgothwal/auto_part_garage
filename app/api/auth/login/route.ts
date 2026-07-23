@@ -5,6 +5,19 @@ import type { AuthApiPayload } from "@/lib/auth/types"
 
 export const dynamic = "force-dynamic"
 
+async function readBackendJson(response: Response): Promise<AuthApiPayload | null> {
+  const contentType = response.headers.get("content-type") ?? ""
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return null
+  }
+
+  try {
+    return (await response.json()) as AuthApiPayload
+  } catch {
+    return null
+  }
+}
+
 function normalizeForwardedFor(value: string): string {
   if (process.env.NODE_ENV !== "production") {
     const [clientIp, ...remainingIps] = value.split(",")
@@ -53,8 +66,20 @@ export async function POST(request: NextRequest) {
     userAgent: request.headers.get("user-agent"),
     forwardedFor,
   })
-  const payload = (await backend.json()) as AuthApiPayload
+  const payload = await readBackendJson(backend)
   const issuedCookies = getSetCookieHeaders(backend.headers)
+
+  if (!payload) {
+    return NextResponse.json(
+      {
+        ok: false,
+        success: false,
+        message:
+          "Backend login endpoint did not return JSON. Check ADMIN_API_BASE_URL points to auto_parts_admin.",
+      },
+      { status: 502 },
+    )
+  }
 
   if (backend.ok && payload.ok && !payload.user.roles.includes("Garage")) {
     await requestBackend("/api/v1/user/auth/logout", {
