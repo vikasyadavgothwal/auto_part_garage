@@ -375,13 +375,24 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
     try {
       const normalizedFormMobile = normalizeMobileValue(form.mobile)
-      const normalizedSavedMobile = normalizeMobileValue(currentProfile.mobile ?? "")
-      if (normalizedFormMobile !== normalizedSavedMobile) {
-        await persistSettings()
-      }
 
       if (!isFirebaseAuthConfigured()) {
         throw new Error("Firebase phone authentication is not configured")
+      }
+
+      const checkResponse = await authenticatedFetch(
+        appPath("/api/settings/mobile-otp/check"),
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ phone: normalizedFormMobile }),
+        },
+      )
+      const checkPayload = (await checkResponse.json().catch(() => null)) as {
+        message?: string
+      } | null
+      if (!checkResponse.ok) {
+        throw new Error(checkPayload?.message || "Unable to check mobile number")
       }
 
       const auth = getFirebaseAuth()
