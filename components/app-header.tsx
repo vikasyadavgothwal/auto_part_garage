@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Bell, ChevronDown, ExternalLink, LogOut, Search, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -20,10 +19,8 @@ import { NotificationPopup } from "@/components/notification-popup"
 import { logoutGarage } from "@/lib/auth/client"
 import { getDashboardUserName, type DashboardUser } from "@/lib/auth/types"
 import { mainWebsiteUrl } from "@/lib/main-website-url"
-import { appRoutes } from "@/lib/routes"
 
 export function DashboardHeader({ user }: { user: DashboardUser }) {
-  const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const displayName = getDashboardUserName(user)
@@ -31,8 +28,7 @@ export function DashboardHeader({ user }: { user: DashboardUser }) {
   const handleLogout = async () => {
     setIsLoggingOut(true)
     await logoutGarage()
-    router.replace(appRoutes.login)
-    router.refresh()
+    window.location.assign(mainWebsiteUrl())
   }
 
   return (
