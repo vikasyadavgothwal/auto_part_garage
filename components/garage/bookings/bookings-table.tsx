@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -87,17 +89,48 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
   const [pendingStatusChange, setPendingStatusChange] =
     useState<PendingStatusChange | null>(null)
   const [statusError, setStatusError] = useState("")
+  const [completionOtp, setCompletionOtp] = useState("")
+  const [otpMessage, setOtpMessage] = useState("")
   const [isPending, startTransition] = useTransition()
 
   function requestStatusChange(booking: Booking, status: BookingStatus) {
     setPendingStatusChange({ booking, status })
     setStatusError("")
+    setCompletionOtp("")
+    setOtpMessage("")
   }
 
   function closeStatusDialog() {
     if (isPending) return
     setPendingStatusChange(null)
     setStatusError("")
+    setCompletionOtp("")
+    setOtpMessage("")
+  }
+
+  function sendCompletionOtp() {
+    if (!pendingStatusChange?.booking.backendId) return
+
+    setStatusError("")
+    setOtpMessage("")
+    startTransition(async () => {
+      const response = await fetch(
+        appPath(
+          `/api/bookings/${pendingStatusChange.booking.backendId}/completion-otp`,
+        ),
+        { method: "POST" },
+      )
+      const payload = (await response.json().catch(() => null)) as
+        | { message?: string }
+        | null
+
+      if (!response.ok) {
+        setStatusError(payload?.message ?? "Unable to send completion OTP")
+        return
+      }
+
+      setOtpMessage(payload?.message ?? "Completion OTP sent to customer email")
+    })
   }
 
   function updateStatus() {
@@ -110,11 +143,21 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
       return
     }
 
+    if (status === "completed" && !/^\d{6}$/.test(completionOtp.trim())) {
+      setStatusError("Enter the 6-digit OTP sent to the customer")
+      return
+    }
+
     startTransition(async () => {
       const response = await fetch(appPath(`/api/bookings/${booking.backendId}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status,
+          ...(status === "completed"
+            ? { completionOtp: completionOtp.trim() }
+            : {}),
+        }),
       })
 
       if (!response.ok) {
@@ -127,6 +170,8 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
 
       setPendingStatusChange(null)
       setStatusError("")
+      setCompletionOtp("")
+      setOtpMessage("")
       router.refresh()
     })
   }
@@ -308,6 +353,44 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
                 {pendingStatusChange.booking.date} ·{" "}
                 {pendingStatusChange.booking.time}
               </div>
+            </div>
+          ) : null}
+
+          {pendingStatusChange?.status === "completed" ? (
+            <div className="space-y-3 rounded-lg border border-border/70 p-3">
+              <div className="space-y-1">
+                <Label htmlFor="completion-otp">Customer completion OTP</Label>
+                <p className="text-xs text-muted-foreground">
+                  Send an OTP to the customer email and enter it here after the
+                  customer confirms the service is complete.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  id="completion-otp"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={completionOtp}
+                  onChange={(event) =>
+                    setCompletionOtp(event.target.value.replace(/\D/g, ""))
+                  }
+                  placeholder="6-digit OTP"
+                  className="sm:max-w-40"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isPending}
+                  onClick={sendCompletionOtp}
+                >
+                  {isPending ? "Sending..." : "Send OTP"}
+                </Button>
+              </div>
+              {otpMessage ? (
+                <p className="text-sm font-medium text-emerald-600">
+                  {otpMessage}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
