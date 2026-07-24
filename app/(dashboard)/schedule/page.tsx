@@ -46,6 +46,7 @@ export default async function GarageSchedulePage({
         description={schedulePageData.description}
         actionLabel={schedulePageData.primaryActionLabel}
         services={services}
+        bookings={bookings}
       />
 
       <ScheduleOverviewCard

@@ -87,6 +87,7 @@ export type BookingsPageData = {
   bookings: Array<{
     id: string
     backendId?: string
+    customerId?: string | null
     date: string
     time: string
     customer: string

@@ -165,6 +165,7 @@ export function buildBookingsPageData(
     bookings: bookings.map((booking) => ({
       id: booking.publicId,
       backendId: booking.id,
+      customerId: booking.customerId,
       date: formatDate(booking.bookingDate),
       time: booking.bookingTime ?? "Awaiting user",
       customer: booking.customerName,

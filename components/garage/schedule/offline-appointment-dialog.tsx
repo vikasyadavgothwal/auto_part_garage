@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { authenticatedFetch } from "@/lib/auth/client"
+import type { GarageBookingRecord } from "@/lib/garage-bookings.server"
 import type { GarageServiceTableItem } from "@/lib/garage-services"
 import { appPath } from "@/lib/routes"
 
@@ -25,6 +26,7 @@ type OfflineAppointmentDialogProps = {
   description: string
   actionLabel: string
   services: GarageServiceTableItem[]
+  bookings: GarageBookingRecord[]
 }
 
 type OfflineAppointmentForm = {
@@ -76,6 +78,27 @@ const digitsOnlyFields = new Set<keyof OfflineAppointmentForm>([
   "vehicleYear",
 ])
 
+const slotTimes = Array.from({ length: 35 }, (_, index) => {
+  const totalMinutes = 9 * 60 + index * 15
+  const hour24 = Math.floor(totalMinutes / 60)
+  const minute = totalMinutes % 60
+  const period = hour24 >= 12 ? "PM" : "AM"
+  const hour = hour24 % 12 || 12
+  return `${hour}:${String(minute).padStart(2, "0")} ${period}`
+})
+
+const slotGroups = [
+  { label: "Morning", slots: slotTimes.filter((time) => time.endsWith("AM")) },
+  {
+    label: "Afternoon",
+    slots: slotTimes.filter((time) => {
+      const hour = Number(time.split(":")[0])
+      return time.endsWith("PM") && (hour === 12 || hour < 5)
+    }),
+  },
+  { label: "Evening", slots: slotTimes.filter((time) => time.startsWith("5:")) },
+]
+
 const sanitizeValue = (field: keyof OfflineAppointmentForm, value: string) => {
   if (digitsOnlyFields.has(field)) {
     return value.replace(/\D/g, "")
@@ -86,20 +109,12 @@ const sanitizeValue = (field: keyof OfflineAppointmentForm, value: string) => {
   return value
 }
 
-const toDisplayTime = (value: string) => {
-  const [hourValue, minuteValue] = value.split(":")
-  const hour = Number(hourValue)
-  if (!Number.isInteger(hour) || !minuteValue) return value
-  const period = hour >= 12 ? "PM" : "AM"
-  const displayHour = hour % 12 || 12
-  return `${displayHour}:${minuteValue} ${period}`
-}
-
 export function OfflineAppointmentDialog({
   title,
   description,
   actionLabel,
   services,
+  bookings,
 }: OfflineAppointmentDialogProps) {
   const router = useRouter()
   const activeServices = useMemo(
@@ -113,6 +128,19 @@ export function OfflineAppointmentDialog({
     serviceId: activeServices[0]?.databaseId ?? "",
   })
   const [error, setError] = useState("")
+  const unavailableTimes = useMemo(() => {
+    if (!form.bookingDate) return new Set<string>()
+    return new Set(
+      bookings
+        .filter(
+          (booking) =>
+            booking.bookingDate === form.bookingDate &&
+            booking.status !== "cancelled" &&
+            Boolean(booking.bookingTime),
+        )
+        .map((booking) => booking.bookingTime as string),
+    )
+  }, [bookings, form.bookingDate])
 
   const updateForm = (field: keyof OfflineAppointmentForm, value: string) => {
     const maxLength = maxLengths[field]
@@ -120,6 +148,7 @@ export function OfflineAppointmentDialog({
     setForm((current) => ({
       ...current,
       [field]: maxLength ? sanitized.slice(0, maxLength) : sanitized,
+      ...(field === "bookingDate" ? { bookingTime: "" } : {}),
     }))
   }
 
@@ -147,6 +176,9 @@ export function OfflineAppointmentDialog({
     const appointmentDate = new Date(`${form.bookingDate}T00:00:00`)
     if (appointmentDate < today) return "Appointment date cannot be in the past"
     if (!form.bookingTime) return "Appointment time is required"
+    if (unavailableTimes.has(form.bookingTime)) {
+      return "This appointment slot is already booked"
+    }
     if (form.vehicleYear) {
       const year = Number(form.vehicleYear)
       const maxYear = new Date().getFullYear() + 1
@@ -185,7 +217,7 @@ export function OfflineAppointmentDialog({
           vehicleModel: form.vehicleModel.trim(),
           vehicleVin: form.vehicleVin.trim(),
           notes: form.notes.trim(),
-          bookingTime: toDisplayTime(form.bookingTime),
+          bookingTime: form.bookingTime,
         }),
       })
       const payload = (await response.json()) as BookingMutationPayload
@@ -316,16 +348,39 @@ export function OfflineAppointmentDialog({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="offline-time">Time</Label>
-                <Input
+                <div
                   id="offline-time"
-                  type="time"
-                  value={form.bookingTime}
-                  onChange={(event) => updateForm("bookingTime", event.target.value)}
-                  className="h-11 border-border bg-brand-surface"
-                  required
-                />
+                  className="space-y-3 rounded-lg border border-border/70 bg-brand-surface p-3"
+                >
+                  {slotGroups.map((group) => (
+                    <div key={group.label} className="space-y-2">
+                      <div className="text-xs font-medium uppercase text-muted-foreground">
+                        {group.label}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {group.slots.map((time) => {
+                          const isUnavailable = unavailableTimes.has(time)
+                          const isSelected = form.bookingTime === time
+                          return (
+                            <Button
+                              key={time}
+                              type="button"
+                              variant={isSelected ? "default" : "outline"}
+                              disabled={!form.bookingDate || isUnavailable}
+                              className="h-9 justify-center rounded-md text-xs"
+                              onClick={() => updateForm("bookingTime", time)}
+                            >
+                              {time}
+                              {isUnavailable ? " · Booked" : ""}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-2">

@@ -64,6 +64,10 @@ function formatStatus(value: BookingStatus) {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
+function requiresCompletionOtp(booking: Booking, status: BookingStatus) {
+  return status === "completed" && Boolean(booking.customerId)
+}
+
 function DetailRow({
   label,
   value,
@@ -143,7 +147,7 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
       return
     }
 
-    if (status === "completed" && !/^\d{6}$/.test(completionOtp.trim())) {
+    if (requiresCompletionOtp(booking, status) && !/^\d{6}$/.test(completionOtp.trim())) {
       setStatusError("Enter the 6-digit OTP sent to the customer")
       return
     }
@@ -154,7 +158,7 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status,
-          ...(status === "completed"
+          ...(requiresCompletionOtp(booking, status)
             ? { completionOtp: completionOtp.trim() }
             : {}),
         }),
@@ -356,7 +360,19 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
             </div>
           ) : null}
 
-          {pendingStatusChange?.status === "completed" ? (
+          {pendingStatusChange?.status === "completed" &&
+          !pendingStatusChange.booking.customerId ? (
+            <div className="rounded-lg border border-border/70 bg-muted/30 p-3 text-sm text-muted-foreground">
+              This offline appointment was created by the garage, so customer
+              OTP is not required to complete it.
+            </div>
+          ) : null}
+
+          {pendingStatusChange &&
+          requiresCompletionOtp(
+            pendingStatusChange.booking,
+            pendingStatusChange.status,
+          ) ? (
             <div className="space-y-3 rounded-lg border border-border/70 p-3">
               <div className="space-y-1">
                 <Label htmlFor="completion-otp">Customer completion OTP</Label>
