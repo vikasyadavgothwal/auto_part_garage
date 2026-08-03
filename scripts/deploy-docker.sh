@@ -19,13 +19,13 @@ git reset --hard "origin/$BRANCH"
 
 docker network inspect "$DOCKER_NETWORK" >/dev/null 2>&1 || docker network create "$DOCKER_NETWORK"
 
+GIT_SHA="$(git rev-parse --short HEAD)"
+docker build --pull -t "$IMAGE_NAME:$GIT_SHA" -t "$IMAGE_NAME:latest" .
+
 if [[ -n "$PM2_APP_NAME" ]] && command -v pm2 >/dev/null 2>&1; then
   pm2 stop "$PM2_APP_NAME" || true
   pm2 save || true
 fi
-
-GIT_SHA="$(git rev-parse --short HEAD)"
-docker build --pull -t "$IMAGE_NAME:$GIT_SHA" -t "$IMAGE_NAME:latest" .
 
 docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
 
