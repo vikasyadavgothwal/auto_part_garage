@@ -77,6 +77,12 @@ export function ServicesTable({
 
   const saveReply = () => {
     if (!selectedService || !selectedReview) return
+    if (!reply.trim()) {
+      const message = "Reply is required"
+      setError(message)
+      toast.error(message)
+      return
+    }
     const isEditing = Boolean(selectedReview.garageReply)
     setError("")
 
@@ -95,7 +101,9 @@ export function ServicesTable({
           | null
 
         if (!response.ok || !payload?.ok || !payload.review) {
-          setError(payload?.message ?? "Unable to save reply")
+          const message = payload?.message ?? "Unable to save reply"
+          setError(message)
+          toast.error(message)
           return
         }
 
@@ -124,7 +132,9 @@ export function ServicesTable({
         setReply(updatedReview.garageReply ?? "")
         toast.success(isEditing ? "Reply updated successfully" : "Reply saved successfully")
       } catch {
-        setError("Unable to reach the server. Please try again.")
+        const message = "Unable to reach the server. Please try again."
+        setError(message)
+        toast.error(message)
       }
     })
   }

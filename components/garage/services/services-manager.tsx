@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react"
 import { Plus } from "lucide-react"
+import { toast } from "sonner"
 
 import { ServiceManagementTipsCard } from "@/components/garage/services/service-management-tips-card"
 import { ServiceStats } from "@/components/garage/services/service-stats"
@@ -52,6 +53,27 @@ const emptyForm: GarageServiceFormValues = {
   status: "active",
 }
 
+const SERVICE_NAME_MAX = 120
+const SERVICE_CATEGORY_MAX = 80
+
+const validateServiceForm = (form: GarageServiceFormValues) => {
+  if (form.name.trim().length < 2) return "Service name is required"
+  if (form.name.trim().length > SERVICE_NAME_MAX) {
+    return `Service name must be ${SERVICE_NAME_MAX} characters or fewer`
+  }
+  if (form.category.trim().length < 2) return "Category is required"
+  if (form.category.trim().length > SERVICE_CATEGORY_MAX) {
+    return `Category must be ${SERVICE_CATEGORY_MAX} characters or fewer`
+  }
+  if (!Number.isInteger(form.durationMinutes) || form.durationMinutes < 1 || form.durationMinutes > 1440) {
+    return "Duration must be a whole number between 1 and 1440 minutes"
+  }
+  if (!Number.isFinite(form.price) || form.price < 0 || form.price > 999999) {
+    return "Price must be between 0 and 999999"
+  }
+  return ""
+}
+
 const formFromService = (
   service: GarageServiceTableItem,
 ): GarageServiceFormValues => ({
@@ -75,7 +97,9 @@ export function ServicesManager({
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [error, setError] = useState("")
+  const [pendingDeleteService, setPendingDeleteService] =
+    useState<GarageServiceTableItem | null>(null)
+  const [, setError] = useState("")
   const stats = useMemo(() => buildServiceStats(services), [services])
 
   const openCreateDialog = () => {
@@ -96,20 +120,32 @@ export function ServicesManager({
     field: keyof GarageServiceFormValues,
     value: string,
   ) => {
+    const sanitizedValue =
+      field === "name"
+        ? value.slice(0, SERVICE_NAME_MAX)
+        : field === "category"
+          ? value.slice(0, SERVICE_CATEGORY_MAX)
+          : value
     setForm((current) => ({
       ...current,
       [field]:
         field === "status"
-          ? (value as GarageServiceStatus)
+          ? (sanitizedValue as GarageServiceStatus)
           : field === "name" || field === "category"
-            ? value
-            : Number(value),
+            ? sanitizedValue
+            : Number(sanitizedValue),
     }))
   }
 
   const saveService = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError("")
+    const validationError = validateServiceForm(form)
+    if (validationError) {
+      setError(validationError)
+      toast.error(validationError)
+      return
+    }
     setIsSubmitting(true)
 
     try {
@@ -122,7 +158,11 @@ export function ServicesManager({
         {
           method: editingService ? "PATCH" : "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            ...form,
+            name: form.name.trim(),
+            category: form.category.trim(),
+          }),
         },
       )
       const payload = (await response.json()) as ServiceMutationPayload
@@ -141,20 +181,29 @@ export function ServicesManager({
       setIsDialogOpen(false)
       setEditingService(null)
       setForm(emptyForm)
+      toast.success(editingService ? "Service updated successfully" : "Service added successfully")
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to save service")
+      const message = saveError instanceof Error ? saveError.message : "Unable to save service"
+      setError(message)
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const deleteService = async (service: GarageServiceTableItem) => {
+  const requestDeleteService = (service: GarageServiceTableItem) => {
     setError("")
-    setDeletingId(service.databaseId)
+    setPendingDeleteService(service)
+  }
+
+  const deleteService = async () => {
+    if (!pendingDeleteService) return
+    setError("")
+    setDeletingId(pendingDeleteService.databaseId)
 
     try {
       const response = await authenticatedFetch(
-        appPath(`/api/services/${service.databaseId}`),
+        appPath(`/api/services/${pendingDeleteService.databaseId}`),
         { method: "DELETE" },
       )
       const payload = (await response.json()) as ServiceMutationPayload
@@ -162,10 +211,14 @@ export function ServicesManager({
         throw new Error(payload.message || "Unable to delete service")
       }
       setServices((current) =>
-        current.filter((item) => item.databaseId !== service.databaseId),
+        current.filter((item) => item.databaseId !== pendingDeleteService.databaseId),
       )
+      setPendingDeleteService(null)
+      toast.success("Service deleted successfully")
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete service")
+      const message = deleteError instanceof Error ? deleteError.message : "Unable to delete service"
+      setError(message)
+      toast.error(message)
     } finally {
       setDeletingId(null)
     }
@@ -207,18 +260,12 @@ export function ServicesManager({
         </Button>
       </div>
 
-      {error ? (
-        <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-
       <ServiceStats stats={stats} />
       <ServicesTable
         services={services}
         deletingId={deletingId}
         onEdit={openEditDialog}
-        onDelete={deleteService}
+        onDelete={requestDeleteService}
         onReviewReplySaved={updateServiceReview}
       />
       <ServiceManagementTipsCard tips={tips} />
@@ -232,7 +279,7 @@ export function ServicesManager({
             </DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-4" onSubmit={saveService}>
+          <form className="space-y-4" onSubmit={saveService} noValidate>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="service-name">Service Name</Label>
@@ -240,8 +287,8 @@ export function ServicesManager({
                   id="service-name"
                   value={form.name}
                   onChange={(event) => updateForm("name", event.target.value)}
+                  maxLength={SERVICE_NAME_MAX}
                   className="h-11 border-border bg-brand-surface"
-                  required
                 />
               </div>
 
@@ -251,8 +298,8 @@ export function ServicesManager({
                   id="service-category"
                   value={form.category}
                   onChange={(event) => updateForm("category", event.target.value)}
+                  maxLength={SERVICE_CATEGORY_MAX}
                   className="h-11 border-border bg-brand-surface"
-                  required
                 />
               </div>
 
@@ -268,7 +315,6 @@ export function ServicesManager({
                     updateForm("durationMinutes", event.target.value)
                   }
                   className="h-11 border-border bg-brand-surface"
-                  required
                 />
               </div>
 
@@ -282,7 +328,6 @@ export function ServicesManager({
                   value={form.price}
                   onChange={(event) => updateForm("price", event.target.value)}
                   className="h-11 border-border bg-brand-surface"
-                  required
                 />
               </div>
 
@@ -313,6 +358,42 @@ export function ServicesManager({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(pendingDeleteService)}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) setPendingDeleteService(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete service?</DialogTitle>
+            <DialogDescription>
+              {pendingDeleteService
+                ? `Delete ${pendingDeleteService.name}? This cannot be undone.`
+                : "This cannot be undone."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={Boolean(deletingId)}
+              onClick={() => setPendingDeleteService(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={Boolean(deletingId)}
+              onClick={deleteService}
+            >
+              {deletingId ? "Deleting..." : "Delete service"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

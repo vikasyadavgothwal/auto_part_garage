@@ -55,6 +55,12 @@ export function ReviewsTable({ reviews }: ReviewsTableProps) {
 
   function saveReply() {
     if (!selectedReview) return
+    if (!reply.trim()) {
+      const message = "Reply is required"
+      setError(message)
+      toast.error(message)
+      return
+    }
     const isEditing = Boolean(selectedReview.reply)
     setError(null)
 
@@ -73,7 +79,9 @@ export function ReviewsTable({ reviews }: ReviewsTableProps) {
           const payload = (await response.json().catch(() => null)) as
             | { message?: string }
             | null
-          setError(payload?.message ?? "Unable to save reply")
+          const message = payload?.message ?? "Unable to save reply"
+          setError(message)
+          toast.error(message)
           return
         }
 
@@ -81,7 +89,9 @@ export function ReviewsTable({ reviews }: ReviewsTableProps) {
         setSelectedReview(null)
         router.refresh()
       } catch {
-        setError("Unable to reach the server. Please try again.")
+        const message = "Unable to reach the server. Please try again."
+        setError(message)
+        toast.error(message)
       }
     })
   }

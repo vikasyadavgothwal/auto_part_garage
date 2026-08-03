@@ -197,6 +197,7 @@ export function OfflineAppointmentDialog({
     const validationError = validate()
     if (validationError) {
       setError(validationError)
+      toast.error(validationError)
       return
     }
 
@@ -275,7 +276,7 @@ export function OfflineAppointmentDialog({
             </p>
           ) : null}
 
-          <form className="space-y-4" onSubmit={saveAppointment}>
+          <form className="space-y-4" onSubmit={saveAppointment} noValidate>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="offline-service">Service</Label>
@@ -284,7 +285,6 @@ export function OfflineAppointmentDialog({
                   value={form.serviceId}
                   onChange={(event) => updateForm("serviceId", event.target.value)}
                   className="h-11 w-full rounded-lg border border-border bg-brand-surface px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  required
                   disabled={activeServices.length === 0}
                 >
                   {activeServices.length === 0 ? (
@@ -305,7 +305,6 @@ export function OfflineAppointmentDialog({
                   value={form.customerName}
                   onChange={(event) => updateForm("customerName", event.target.value)}
                   className="h-11 border-border bg-brand-surface"
-                  required
                 />
               </div>
 
@@ -320,7 +319,6 @@ export function OfflineAppointmentDialog({
                   value={form.customerPhone}
                   onChange={(event) => updateForm("customerPhone", event.target.value)}
                   className="h-11 border-border bg-brand-surface"
-                  required
                 />
               </div>
 
@@ -343,8 +341,10 @@ export function OfflineAppointmentDialog({
                   min={new Date().toISOString().slice(0, 10)}
                   value={form.bookingDate}
                   onChange={(event) => updateForm("bookingDate", event.target.value)}
+                  onInput={(event) =>
+                    updateForm("bookingDate", event.currentTarget.value)
+                  }
                   className="h-11 border-border bg-brand-surface"
-                  required
                 />
               </div>
 

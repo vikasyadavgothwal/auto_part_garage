@@ -9,6 +9,7 @@ import {
 } from "firebase/auth"
 import {
   CheckCircle2,
+  ImagePlus,
   Mail,
   MessageSquareText,
   Save,
@@ -58,9 +59,21 @@ type UploadPayload = {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MOBILE_PATTERN = /^\+\d{8,18}$/
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
+const PLACE_PATTERN = /^[A-Za-z][A-Za-z\s'.-]*$/
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 const MAX_GALLERY_UPLOADS = 12
+const MAX_GARAGE_NAME_LENGTH = 160
+const MAX_EMAIL_LENGTH = 254
+const MAX_MOBILE_LOCAL_LENGTH = 14
+const MAX_RESPONSE_TIME_LENGTH = 80
+const MAX_JOBS_COMPLETED_LENGTH = 6
+const MAX_YEARS_EXPERIENCE_LENGTH = 3
+const MAX_ADDRESS_LENGTH = 500
+const MAX_PLACE_LENGTH = 80
+const MAX_PINCODE_LENGTH = 12
+const MAX_CERTIFICATION_LENGTH = 160
+const MAX_ABOUT_LENGTH = 1000
 const MOBILE_COUNTRY_CODES = [
   { code: "+971", label: "UAE" },
   { code: "+91", label: "India" },
@@ -74,9 +87,31 @@ const MOBILE_COUNTRY_CODES = [
   { code: "+92", label: "Pakistan" },
 ] as const
 const DEFAULT_MOBILE_COUNTRY_CODE = "+971"
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const hour = Math.floor(index / 2)
+  const minute = index % 2 === 0 ? "00" : "30"
+  const value = `${String(hour).padStart(2, "0")}:${minute}`
+  const labelHour = hour % 12 || 12
+  const suffix = hour < 12 ? "AM" : "PM"
+  return { value, label: `${labelHour}:${minute} ${suffix}` }
+})
 
 const normalizeDigits = (value: string, maxLength = 14) =>
   value.replace(/\D/g, "").slice(0, maxLength)
+
+const normalizeLimitedText = (value: string, maxLength: number) =>
+  value.slice(0, maxLength)
+
+const normalizePlaceText = (value: string) =>
+  value.replace(/[^A-Za-z\s'.-]/g, "").slice(0, MAX_PLACE_LENGTH)
+
+const normalizeNumberText = (value: string, maxLength: number) =>
+  value.replace(/\D/g, "").slice(0, maxLength)
+
+const numberFromDigits = (value: string) => Number(normalizeNumberText(value, 10) || 0)
+
+const closeOptionsFor = (openTime: string) =>
+  TIME_OPTIONS.filter((option) => option.value > openTime)
 
 const parseMobileNumber = (value: string) => {
   const compact = value.replace(/[^\d+]/g, "")
@@ -162,8 +197,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   const [mobileLocalNumber, setMobileLocalNumber] = useState(
     initialMobile.localNumber,
   )
-  const [message, setMessage] = useState("")
-  const [error, setError] = useState("")
+  const [, setError] = useState("")
   const [otp, setOtp] = useState("")
   const [mobileVerificationId, setMobileVerificationId] = useState("")
   const [certificationName, setCertificationName] = useState("")
@@ -218,7 +252,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   }
 
   const setMobileNumber = (countryCode: string, localNumber: string) => {
-    const digits = normalizeDigits(localNumber)
+    const digits = normalizeDigits(localNumber, MAX_MOBILE_LOCAL_LENGTH)
     setMobileCountryCode(countryCode)
     setMobileLocalNumber(digits)
     setField("mobile", buildMobileNumber(countryCode, digits))
@@ -244,35 +278,75 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   }
 
   const setDayHours = (day: string, field: "open" | "close", value: string) => {
-    setForm((current) => ({
-      ...current,
-      workingHoursByDay: {
-        ...current.workingHoursByDay,
-        [day]: {
-          enabled: true,
-          open: current.workingHoursByDay[day]?.open || "09:00",
-          close: current.workingHoursByDay[day]?.close || "18:00",
-          [field]: value,
+    setForm((current) => {
+      const currentHours = current.workingHoursByDay[day]
+      const nextOpen = field === "open" ? value : currentHours?.open || "09:00"
+      let nextClose = field === "close" ? value : currentHours?.close || "18:00"
+      if (nextClose <= nextOpen) {
+        nextClose = closeOptionsFor(nextOpen)[0]?.value || "23:30"
+      }
+      return {
+        ...current,
+        workingHoursByDay: {
+          ...current.workingHoursByDay,
+          [day]: {
+            enabled: true,
+            open: nextOpen,
+            close: nextClose,
+          },
         },
-      },
-    }))
+      }
+    })
   }
 
   const validateForm = () => {
     if (form.contactEmail && !EMAIL_PATTERN.test(form.contactEmail)) {
       return "Enter a valid email address"
     }
+    if (form.contactEmail.length > MAX_EMAIL_LENGTH) {
+      return `Email must be ${MAX_EMAIL_LENGTH} characters or fewer`
+    }
     if (form.mobile && !MOBILE_PATTERN.test(form.mobile)) {
       return "Enter a valid mobile number"
     }
-    if (form.garageName && form.garageName.length > 160) {
-      return "Garage name must be 160 characters or fewer"
+    if (form.garageName && form.garageName.length > MAX_GARAGE_NAME_LENGTH) {
+      return `Garage name must be ${MAX_GARAGE_NAME_LENGTH} characters or fewer`
+    }
+    if (form.responseTime.length > MAX_RESPONSE_TIME_LENGTH) {
+      return `Response time must be ${MAX_RESPONSE_TIME_LENGTH} characters or fewer`
+    }
+    if (form.address.length > MAX_ADDRESS_LENGTH) {
+      return `Address must be ${MAX_ADDRESS_LENGTH} characters or fewer`
+    }
+    if (form.about.length > MAX_ABOUT_LENGTH) {
+      return `About paragraph must be ${MAX_ABOUT_LENGTH} characters or fewer`
+    }
+    for (const [label, value] of [
+      ["Country", form.country],
+      ["State", form.state],
+      ["City", form.city],
+    ] as const) {
+      if (value && !PLACE_PATTERN.test(value)) {
+        return `${label} can use letters, spaces, apostrophes, periods, and hyphens only`
+      }
+      if (value.length > MAX_PLACE_LENGTH) {
+        return `${label} must be ${MAX_PLACE_LENGTH} characters or fewer`
+      }
+    }
+    if (form.pincode.length > MAX_PINCODE_LENGTH) {
+      return `Pincode must be ${MAX_PINCODE_LENGTH} digits or fewer`
     }
     if (form.jobCompletedNumber < 0 || !Number.isInteger(form.jobCompletedNumber)) {
       return "Job completed number must be a whole number"
     }
+    if (String(form.jobCompletedNumber).length > MAX_JOBS_COMPLETED_LENGTH) {
+      return `Job completed number must be ${MAX_JOBS_COMPLETED_LENGTH} digits or fewer`
+    }
     if (form.yearsExperience < 0 || !Number.isInteger(form.yearsExperience)) {
       return "Years of experience must be a whole number"
+    }
+    if (String(form.yearsExperience).length > MAX_YEARS_EXPERIENCE_LENGTH) {
+      return `Years of experience must be ${MAX_YEARS_EXPERIENCE_LENGTH} digits or fewer`
     }
     if (form.certifications.some((name) => !name.trim())) {
       return "Certification names cannot be empty"
@@ -310,17 +384,16 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   const saveSettings = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError("")
-    setMessage("")
     const validationError = validateForm()
     if (validationError) {
       setError(validationError)
+      toast.error(validationError)
       return
     }
     setIsSaving(true)
 
     try {
       await persistSettings()
-      setMessage("Settings saved")
       toast.success("Settings saved")
     } catch (saveError) {
       const errorMessage =
@@ -334,7 +407,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
   const sendEmailVerification = async () => {
     setError("")
-    setMessage("")
     setIsSendingEmail(true)
 
     try {
@@ -346,13 +418,15 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       if (!response.ok || !payload.ok) {
         throw new Error(payload.message || "Unable to send verification link")
       }
-      setMessage(
+      toast.success(
         payload.verificationLink
           ? `${payload.message} ${payload.verificationLink}`
           : payload.message || "Verification link sent",
       )
     } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : "Unable to send verification link")
+      const errorMessage = sendError instanceof Error ? sendError.message : "Unable to send verification link"
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsSendingEmail(false)
     }
@@ -360,14 +434,15 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
   const sendMobileOtp = async () => {
     setError("")
-    setMessage("")
     const validationError = validateForm()
     if (validationError) {
       setError(validationError)
+      toast.error(validationError)
       return
     }
     if (!form.mobile) {
       setError("Enter a mobile number before verification")
+      toast.error("Enter a mobile number before verification")
       return
     }
 
@@ -410,10 +485,12 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       }
       setMobileVerificationId(verificationId)
       setOtp("")
-      setMessage("OTP sent by Firebase")
+      toast.success("OTP sent by Firebase")
     } catch (sendError) {
       logFirebasePhoneError(sendError)
-      setError(getFirebasePhoneErrorMessage(sendError))
+      const errorMessage = getFirebasePhoneErrorMessage(sendError)
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsSendingOtp(false)
     }
@@ -421,7 +498,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
   const verifyMobileOtp = async () => {
     setError("")
-    setMessage("")
     setIsVerifyingOtp(true)
 
     try {
@@ -456,9 +532,11 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       syncProfileForm(payload.profile)
       setOtp("")
       setMobileVerificationId("")
-      setMessage("Mobile number verified")
+      toast.success("Mobile number verified")
     } catch (verifyError) {
-      setError(getFirebasePhoneErrorMessage(verifyError))
+      const errorMessage = getFirebasePhoneErrorMessage(verifyError)
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsVerifyingOtp(false)
     }
@@ -470,7 +548,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   ) => {
     if (!files?.length) return
     setError("")
-    setMessage("")
     const isGarageImage = type === "garageImage"
     const selectedFiles = Array.from(files)
     if (!isGarageImage && selectedFiles.length > MAX_GALLERY_UPLOADS) {
@@ -522,9 +599,11 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
           ].slice(0, 20),
         }))
       }
-      setMessage("Images uploaded. Save settings to keep these changes.")
+      toast.success("Images uploaded. Save settings to keep these changes.")
     } catch (uploadError) {
-      setError(uploadError instanceof Error ? uploadError.message : "Unable to upload images")
+      const errorMessage = uploadError instanceof Error ? uploadError.message : "Unable to upload images"
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsUploadingGarageImage(false)
       setIsUploadingGallery(false)
@@ -543,14 +622,17 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     const name = certificationName.trim()
     if (!name) {
       setError("Enter a certification name")
+      toast.error("Enter a certification name")
       return
     }
-    if (name.length > 160) {
-      setError("Certification names must be 160 characters or fewer")
+    if (name.length > MAX_CERTIFICATION_LENGTH) {
+      setError(`Certification names must be ${MAX_CERTIFICATION_LENGTH} characters or fewer`)
+      toast.error(`Certification names must be ${MAX_CERTIFICATION_LENGTH} characters or fewer`)
       return
     }
     if (form.certifications.some((item) => item.toLowerCase() === name.toLowerCase())) {
       setError("This certification is already added")
+      toast.error("This certification is already added")
       return
     }
     setError("")
@@ -600,17 +682,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       </div>
       <div id="garage-mobile-recaptcha" />
 
-      {message ? (
-        <p className="rounded-lg border border-brand-success/20 bg-brand-success/10 px-4 py-3 text-sm text-brand-success">
-          {message}
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </p>
-      ) : null}
-
       <Card className="rounded-lg border border-border bg-brand-panel shadow-none">
         <CardHeader>
           <CardTitle className="text-foreground">Contact Verification</CardTitle>
@@ -629,7 +700,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               id="contact-email"
               type="email"
               value={form.contactEmail}
-              onChange={(event) => setField("contactEmail", event.target.value)}
+              onChange={(event) =>
+                setField("contactEmail", normalizeLimitedText(event.target.value, MAX_EMAIL_LENGTH))
+              }
+              maxLength={MAX_EMAIL_LENGTH}
               className="h-11 border-border bg-brand-surface"
             />
             {!emailVerified ? (
@@ -669,7 +743,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                     key={`${country.code}-${country.label}`}
                     value={country.code}
                   >
-                    {country.code} {country.label}
+                    {country.code}
                   </option>
                 ))}
               </select>
@@ -682,6 +756,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 }
                 inputMode="numeric"
                 autoComplete="tel-national"
+                maxLength={MAX_MOBILE_LOCAL_LENGTH}
                 placeholder="Mobile number"
                 className="h-11 min-w-0 rounded-l-none border-l-0 border-border bg-brand-surface"
               />
@@ -738,7 +813,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <Input
               id="garage-name"
               value={form.garageName}
-              onChange={(event) => setField("garageName", event.target.value)}
+              onChange={(event) =>
+                setField("garageName", normalizeLimitedText(event.target.value, MAX_GARAGE_NAME_LENGTH))
+              }
+              maxLength={MAX_GARAGE_NAME_LENGTH}
               placeholder="Garage display name"
               className="h-11 border-border bg-brand-surface"
             />
@@ -746,19 +824,21 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
           <div className="space-y-2 md:col-span-2">
             <Label>Working days in week</Label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+            <div className="grid rounded-lg border border-border bg-brand-surface p-1 sm:grid-cols-7">
               {weekDays.map((day) => (
                 <button
                   key={day}
                   type="button"
                   onClick={() => toggleWorkingDay(day)}
-                  className={`rounded-lg border px-3 py-2 text-sm transition ${
+                  aria-pressed={form.workingDays.includes(day)}
+                  className={`min-h-12 rounded-md px-3 py-2 text-sm font-medium transition ${
                     form.workingDays.includes(day)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-brand-surface text-brand-muted hover:text-foreground"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-brand-muted hover:bg-background hover:text-foreground"
                   }`}
                 >
-                  {day.slice(0, 3)}
+                  <span className="block sm:hidden">{day}</span>
+                  <span className="hidden sm:block">{day.slice(0, 3)}</span>
                 </button>
               ))}
             </div>
@@ -771,11 +851,16 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 Select working days to set daily hours.
               </p>
             ) : null}
-            <div className="grid gap-3 md:grid-cols-2">
-              {form.workingDays.map((day) => (
+            <div className="grid gap-3">
+              {form.workingDays.map((day) => {
+                const openTime = form.workingHoursByDay[day]?.open || "09:00"
+                const closeTime = form.workingHoursByDay[day]?.close || "18:00"
+                const availableCloseOptions = closeOptionsFor(openTime)
+
+                return (
                 <div
                   key={day}
-                  className="grid grid-cols-[90px_1fr_1fr] items-end gap-3 rounded-lg border border-border bg-brand-surface p-3"
+                  className="grid gap-3 rounded-lg border border-border bg-brand-surface p-3 sm:grid-cols-[140px_1fr_1fr] sm:items-end"
                 >
                   <div className="pb-2 text-sm font-medium text-foreground">
                     {day}
@@ -784,34 +869,44 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                     <Label htmlFor={`${day}-open`} className="text-xs">
                       Open
                     </Label>
-                    <Input
+                    <select
                       id={`${day}-open`}
-                      type="time"
-                      value={form.workingHoursByDay[day]?.open || "09:00"}
+                      value={openTime}
                       onChange={(event) =>
                         setDayHours(day, "open", event.target.value)
                       }
-                      className="h-10 border-border bg-background"
+                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                       required
-                    />
+                    >
+                      {TIME_OPTIONS.slice(0, -1).map((option) => (
+                        <option key={`${day}-open-${option.value}`} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor={`${day}-close`} className="text-xs">
                       Close
                     </Label>
-                    <Input
+                    <select
                       id={`${day}-close`}
-                      type="time"
-                      value={form.workingHoursByDay[day]?.close || "18:00"}
+                      value={availableCloseOptions.some((option) => option.value === closeTime) ? closeTime : availableCloseOptions[0]?.value}
                       onChange={(event) =>
                         setDayHours(day, "close", event.target.value)
                       }
-                      className="h-10 border-border bg-background"
+                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                       required
-                    />
+                    >
+                      {availableCloseOptions.map((option) => (
+                        <option key={`${day}-close-${option.value}`} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 
@@ -820,7 +915,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <Input
               id="response-time"
               value={form.responseTime}
-              onChange={(event) => setField("responseTime", event.target.value)}
+              onChange={(event) =>
+                setField("responseTime", normalizeLimitedText(event.target.value, MAX_RESPONSE_TIME_LENGTH))
+              }
+              maxLength={MAX_RESPONSE_TIME_LENGTH}
               placeholder="Within 30 minutes"
               className="h-11 border-border bg-brand-surface"
             />
@@ -830,12 +928,13 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <Label htmlFor="jobs-completed">Job completed number</Label>
             <Input
               id="jobs-completed"
-              type="number"
-              min="0"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={form.jobCompletedNumber}
               onChange={(event) =>
-                setField("jobCompletedNumber", Number(event.target.value))
+                setField("jobCompletedNumber", numberFromDigits(event.target.value.slice(0, MAX_JOBS_COMPLETED_LENGTH)))
               }
+              maxLength={MAX_JOBS_COMPLETED_LENGTH}
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -844,32 +943,49 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <Label htmlFor="years-experience">Year of exp in no</Label>
             <Input
               id="years-experience"
-              type="number"
-              min="0"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={form.yearsExperience}
               onChange={(event) =>
-                setField("yearsExperience", Number(event.target.value))
+                setField("yearsExperience", numberFromDigits(event.target.value.slice(0, MAX_YEARS_EXPERIENCE_LENGTH)))
               }
+              maxLength={MAX_YEARS_EXPERIENCE_LENGTH}
               className="h-11 border-border bg-brand-surface"
             />
           </div>
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="garage-image">Garage image</Label>
-            <div className="flex flex-col gap-3">
+            <div className="rounded-lg border border-dashed border-border bg-brand-surface p-4">
               <Input
                 id="garage-image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 onChange={(event) => uploadImages(event.target.files, "garageImage")}
-                className="h-11 border-border bg-brand-surface"
+                className="sr-only"
               />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Main garage photo
+                  </p>
+                  <p className="text-xs text-brand-muted">
+                    JPG, PNG, or WebP up to 5 MB.
+                  </p>
+                </div>
+                <Button asChild type="button" variant="outline" className="gap-2">
+                  <label htmlFor="garage-image" className="cursor-pointer">
+                    <ImagePlus className="size-4" />
+                    {form.garageImageUrl ? "Replace image" : "Select image"}
+                  </label>
+                </Button>
+              </div>
               {isUploadingGarageImage ? (
-                <p className="text-sm text-brand-muted">Uploading...</p>
+                <p className="mt-3 text-sm text-brand-muted">Uploading...</p>
               ) : null}
             </div>
             {form.garageImageUrl ? (
-              <div className="overflow-hidden rounded-lg border border-border bg-brand-surface">
+              <div className="overflow-hidden rounded-lg border border-border bg-brand-surface shadow-sm">
                 <div
                   className="aspect-[16/9] bg-cover bg-center"
                   style={{ backgroundImage: `url("${garageImageSrc}")` }}
@@ -901,7 +1017,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <textarea
               id="address"
               value={form.address}
-              onChange={(event) => setField("address", event.target.value)}
+              onChange={(event) =>
+                setField("address", normalizeLimitedText(event.target.value, MAX_ADDRESS_LENGTH))
+              }
+              maxLength={MAX_ADDRESS_LENGTH}
               className="min-h-24 w-full rounded-lg border border-border bg-brand-surface px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>
@@ -911,7 +1030,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <Input
               id="country"
               value={form.country}
-              onChange={(event) => setField("country", event.target.value)}
+              onChange={(event) => setField("country", normalizePlaceText(event.target.value))}
+              maxLength={MAX_PLACE_LENGTH}
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -921,7 +1041,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <Input
               id="state"
               value={form.state}
-              onChange={(event) => setField("state", event.target.value)}
+              onChange={(event) => setField("state", normalizePlaceText(event.target.value))}
+              maxLength={MAX_PLACE_LENGTH}
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -931,7 +1052,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <Input
               id="city"
               value={form.city}
-              onChange={(event) => setField("city", event.target.value)}
+              onChange={(event) => setField("city", normalizePlaceText(event.target.value))}
+              maxLength={MAX_PLACE_LENGTH}
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -944,8 +1066,9 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               pattern="[0-9]*"
               value={form.pincode}
               onChange={(event) =>
-                setField("pincode", event.target.value.replace(/\D/g, ""))
+                setField("pincode", normalizeNumberText(event.target.value, MAX_PINCODE_LENGTH))
               }
+              maxLength={MAX_PINCODE_LENGTH}
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -956,7 +1079,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               <Input
                 id="certifications"
                 value={certificationName}
-                onChange={(event) => setCertificationName(event.target.value)}
+                onChange={(event) =>
+                  setCertificationName(normalizeLimitedText(event.target.value, MAX_CERTIFICATION_LENGTH))
+                }
+                maxLength={MAX_CERTIFICATION_LENGTH}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault()
@@ -1004,30 +1130,51 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             <textarea
               id="about"
               value={form.about}
-              onChange={(event) => setField("about", event.target.value)}
+              onChange={(event) =>
+                setField("about", normalizeLimitedText(event.target.value, MAX_ABOUT_LENGTH))
+              }
+              maxLength={MAX_ABOUT_LENGTH}
               className="min-h-32 w-full rounded-lg border border-border bg-brand-surface px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="gallery-images">Gallery images</Label>
-            <Input
-              id="gallery-images"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={(event) => uploadImages(event.target.files, "galleryImages")}
-              className="h-11 border-border bg-brand-surface"
-            />
+            <div className="rounded-lg border border-dashed border-border bg-brand-surface p-4">
+              <Input
+                id="gallery-images"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={(event) => uploadImages(event.target.files, "galleryImages")}
+                className="sr-only"
+              />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Workshop gallery
+                  </p>
+                  <p className="text-xs text-brand-muted">
+                    Select up to {MAX_GALLERY_UPLOADS} images at once. Save settings after upload.
+                  </p>
+                </div>
+                <Button asChild type="button" variant="outline" className="gap-2">
+                  <label htmlFor="gallery-images" className="cursor-pointer">
+                    <ImagePlus className="size-4" />
+                    Select gallery images
+                  </label>
+                </Button>
+              </div>
+            </div>
             {isUploadingGallery ? (
               <p className="text-sm text-brand-muted">Uploading...</p>
             ) : null}
             {form.galleryImageUrls.length ? (
-              <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {form.galleryImageUrls.map((url, index) => (
                   <div
                     key={`${url}-${index}`}
-                    className="overflow-hidden rounded-lg border border-border bg-brand-surface"
+                    className="overflow-hidden rounded-lg border border-border bg-brand-surface shadow-sm"
                   >
                     <div
                       className="aspect-video bg-cover bg-center"

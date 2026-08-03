@@ -4,6 +4,9 @@ const BACKEND_ACCESS_COOKIE = process.env.USER_ACCESS_COOKIE_NAME ?? "user_acces
 const BACKEND_REFRESH_COOKIE = process.env.USER_REFRESH_COOKIE_NAME ?? "user_refresh_token"
 export const GARAGE_ACCESS_COOKIE = "garage_access_token"
 export const GARAGE_REFRESH_COOKIE = "garage_refresh_token"
+const DEFAULT_BACKEND_TIMEOUT_MS = 10_000
+
+const timeoutSignal = () => AbortSignal.timeout(DEFAULT_BACKEND_TIMEOUT_MS)
 
 const backendUrl = (path: string) =>
   {
@@ -90,11 +93,15 @@ export async function requestBackend(
     cookieHeader?: string | null
     body?: BodyInit | null
     contentType?: string | null
+    headers?: HeadersInit
     userAgent?: string | null
     forwardedFor?: string | null
   } = {},
 ) {
   const headers = new Headers({ accept: "application/json" })
+  if (options.headers) {
+    new Headers(options.headers).forEach((value, key) => headers.set(key, value))
+  }
   if (options.cookieHeader) {
     headers.set("cookie", toBackendCookieHeader(options.cookieHeader))
   }
@@ -106,5 +113,6 @@ export async function requestBackend(
     cache: "no-store",
     headers,
     body: options.body,
+    signal: timeoutSignal(),
   })
 }
