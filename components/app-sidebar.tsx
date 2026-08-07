@@ -8,6 +8,14 @@ import {
   ShoppingBag,
   Wrench,
   Star,
+  BarChart3,
+  Headphones,
+  Plug,
+  Search,
+  Shield,
+  Users,
+  ShieldCheck,
+  BadgeCheck,
   Settings,
 } from "lucide-react"
 
@@ -24,15 +32,32 @@ import {
 import { appRoutes, stripBasePath } from "@/lib/routes"
 
 const items = [
-  { title: "Overview", url: appRoutes.overview, icon: House },
-  { title: "Schedule", url: appRoutes.schedule, icon: Calendar },
-  { title: "Bookings", url: appRoutes.bookings, icon: ShoppingBag },
-  { title: "Services", url: appRoutes.services, icon: Wrench },
-  { title: "Reviews", url: appRoutes.reviews, icon: Star },
+  { title: "Overview", url: appRoutes.overview, icon: House, menuKey: "overview" },
+  { title: "Schedule", url: appRoutes.schedule, icon: Calendar, menuKey: "schedule" },
+  { title: "Bookings", url: appRoutes.bookings, icon: ShoppingBag, menuKey: "bookings" },
+  { title: "Services", url: appRoutes.services, icon: Wrench, menuKey: "services" },
+  { title: "Reviews", url: appRoutes.reviews, icon: Star, menuKey: "reviews" },
+  { title: "Reports", url: appRoutes.reports, icon: BarChart3, menuKey: "reports" },
+  { title: "Saved Searches", url: appRoutes.savedSearches, icon: Search, menuKey: "saved-searches" },
+  { title: "Integrations", url: appRoutes.integrations, icon: Plug, menuKey: "integrations" },
+  { title: "Security", url: appRoutes.security, icon: Shield, menuKey: "security" },
+  { title: "Support", url: appRoutes.support, icon: Headphones, menuKey: "support" },
+  { title: "Staff", url: appRoutes.staff, icon: Users, menuKey: "staff" },
+  { title: "Roles", url: appRoutes.roles, icon: ShieldCheck, menuKey: "roles" },
+  { title: "Plans", url: appRoutes.plans, icon: BadgeCheck, menuKey: "plans" },
 ]
 
-export function AppSidebar() {
+export function AppSidebar({
+  visibleMenus = [],
+  planName,
+  isOwner = false,
+}: {
+  visibleMenus?: string[]
+  planName?: string | null
+  isOwner?: boolean
+}) {
   const currentPath = stripBasePath(usePathname())
+  const visibleMenuSet = new Set(["settings", ...(isOwner ? ["overview", "plans"] : []), ...visibleMenus])
 
   return (
     <Sidebar className="border-sidebar-border bg-brand-panel text-foreground">
@@ -43,11 +68,28 @@ export function AppSidebar() {
             Garage
           </p>
         </Link>
+        {planName && visibleMenuSet.has("plans") ? (
+          <Link
+            href={appRoutes.plans}
+            className="group mt-4 block rounded-lg border border-primary/25 bg-background/70 p-3 shadow-[0_14px_34px_rgba(0,0,0,0.20)] transition hover:border-primary/50 hover:bg-muted/40"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md border border-primary/25 bg-primary/10 text-primary">
+                  <BadgeCheck className="h-4 w-4" />
+                </span>
+              {planName}
+              </span>
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.12)]" />
+            </div>
+            
+          </Link>
+        ) : null}
       </SidebarHeader>
 
       <SidebarContent className="flex-1 overflow-y-auto px-4 py-4">
         <SidebarMenu className="space-y-1">
-          {items.map((item) => {
+          {items.filter((item) => visibleMenuSet.has(item.menuKey)).map((item) => {
             const Icon = item.icon
 
             const isActive =
@@ -76,7 +118,7 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border p-4">
+      {visibleMenuSet.has("settings") ? <SidebarFooter className="border-t border-border p-4">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
@@ -102,7 +144,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarFooter>
+      </SidebarFooter> : null}
     </Sidebar>
   )
 }

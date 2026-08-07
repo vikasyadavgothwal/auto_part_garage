@@ -27,6 +27,8 @@ type OfflineAppointmentDialogProps = {
   actionLabel: string
   services: GarageServiceTableItem[]
   bookings: GarageBookingRecord[]
+  canCreateAppointment?: boolean
+  disabledReason?: string | null
 }
 
 type OfflineAppointmentForm = {
@@ -115,6 +117,8 @@ export function OfflineAppointmentDialog({
   actionLabel,
   services,
   bookings,
+  canCreateAppointment = true,
+  disabledReason,
 }: OfflineAppointmentDialogProps) {
   const router = useRouter()
   const activeServices = useMemo(
@@ -153,6 +157,12 @@ export function OfflineAppointmentDialog({
   }
 
   const openDialog = () => {
+    if (!canCreateAppointment) {
+      const message = disabledReason || "Your current plan or role cannot add appointments."
+      setError(message)
+      toast.error(message)
+      return
+    }
     setForm({ ...emptyForm, serviceId: activeServices[0]?.databaseId ?? "" })
     setError("")
     setIsOpen(true)
@@ -251,12 +261,18 @@ export function OfflineAppointmentDialog({
         <Button
           type="button"
           onClick={openDialog}
+          disabled={!canCreateAppointment}
           className="h-auto w-full gap-2 rounded-lg bg-primary px-6 py-3 text-primary-foreground hover:bg-brand-primary-hover sm:w-auto"
         >
           <Plus className="h-5 w-5" />
           {actionLabel}
         </Button>
       </div>
+      {!canCreateAppointment ? (
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+          {disabledReason || "Add appointment is not available for your current plan or staff role."}
+        </p>
+      ) : null}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">

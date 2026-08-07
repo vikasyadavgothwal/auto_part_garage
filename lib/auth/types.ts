@@ -13,7 +13,7 @@ export type DashboardUser = {
 }
 
 export type AuthApiPayload =
-  | { ok: true; success: true; user: DashboardUser; expiresAt?: string }
+  | { ok: true; success: true; user: DashboardUser; expiresAt?: string; mfa?: { challengeId: string; method: "otp" | "pin_or_otp"; planCode: "Free" | "Pro" | "Enterprise"; hasPin: boolean; message: string } }
   | { ok: false; success: false; message: string }
 
 export const getDashboardUserName = (user: DashboardUser) =>

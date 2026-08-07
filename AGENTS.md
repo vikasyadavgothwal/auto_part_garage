@@ -50,7 +50,16 @@ Garage partner dashboard for bookings, services, schedule, reviews, settings, an
 - Firebase login succeeds when configured, and auth cookies are set/cleared through backend login/logout/refresh routes
 - Backend URL points to the admin API server, not the garage frontend
 - Do not mix fleet or supplier logic into garage workflows
-- Run the commands documented in this app README when relevant.
+- Preferred validation: `pnpm lint`, `pnpm exec tsc --noEmit`, and `pnpm build` when relevant.
 - Update project root `docs/AI_HANDOFF.md` after major changes.
+
+### App-Specific Boundaries
+
+- Garage appointment limits, staff limits, role access, and plan feature access must be enforced by `auto_parts_admin`.
+- UI menu/tab visibility may use backend-provided permissions, but backend APIs must still enforce every garage action.
+
+### Visual Design Rule
+
+- For any new UI feature (buttons, inputs, selects, modals, tables, cards, and similar controls), use the existing ShadCN UI components and keep spacing, type scale, colors, and interaction patterns aligned with the current app design language.
 
 <!-- END:autoparts-pro-codex-docs -->
