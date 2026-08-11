@@ -10,7 +10,7 @@ export async function authenticatedFetch(input: RequestInfo | URL, init: Request
       method: "POST",
       credentials: "include",
       cache: "no-store",
-    }).then((result) => result.ok).finally(() => { refreshRequest = null })
+    }).then((result) => result.ok).catch(() => false).finally(() => { refreshRequest = null })
     if (await refreshRequest) response = await fetch(input, options)
   }
   return response

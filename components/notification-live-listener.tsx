@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect } from "react"
 
-import { registerFirebasePushNotifications } from "@/lib/notifications/firebase-push"
 import {
   notificationFetch,
   notificationsApiPath,
@@ -30,12 +29,11 @@ export function NotificationLiveListener({
   }, [onUnreadChange])
 
   useEffect(() => {
-    void registerFirebasePushNotifications()
-    void loadUnreadCount()
+    let source: EventSource | null = null
 
-    const source = new EventSource(notificationsStreamPath, {
-      withCredentials: true,
-    })
+    const unreadTimer = window.setTimeout(() => {
+      void loadUnreadCount()
+    }, 1_500)
 
     const applyPayload = (event: MessageEvent) => {
       try {
@@ -46,10 +44,24 @@ export function NotificationLiveListener({
       } catch {}
     }
 
-    source.addEventListener("snapshot", applyPayload)
-    source.addEventListener("notification", applyPayload)
+    const startStream = () => {
+      if (source || document.visibilityState === "hidden") return
+      source = new EventSource(notificationsStreamPath, {
+        withCredentials: true,
+      })
+      source.addEventListener("snapshot", applyPayload)
+      source.addEventListener("notification", applyPayload)
+    }
 
-    return () => source.close()
+    const streamTimer = window.setTimeout(startStream, 5_000)
+    document.addEventListener("visibilitychange", startStream)
+
+    return () => {
+      window.clearTimeout(unreadTimer)
+      window.clearTimeout(streamTimer)
+      document.removeEventListener("visibilitychange", startStream)
+      source?.close()
+    }
   }, [loadUnreadCount, onUnreadChange])
 
   return null

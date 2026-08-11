@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     cookieHeader: request.headers.get("cookie"),
     contentType: request.headers.get("content-type"),
     userAgent: request.headers.get("user-agent"),
-    body: await request.arrayBuffer(),
+    body: request.body,
   })
   const response = new NextResponse(await backend.text(), {
     status: backend.status,

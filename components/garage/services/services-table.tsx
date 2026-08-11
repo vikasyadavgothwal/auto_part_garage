@@ -180,8 +180,15 @@ export function ServicesTable({
                     </span>
                   </TableCell>
 
-                  <TableCell className={tableCellMutedClass}>
-                    {service.name}
+                  <TableCell className={`${tableCellMutedClass} whitespace-normal`}>
+                    <div>
+                      <p>{service.name}</p>
+                      {service.isPlanSuspended ? (
+                        <p className="mt-1 max-w-md whitespace-normal text-xs leading-5 text-amber-300">
+                          {service.planSuspensionReason || "Temporarily inactive because this service is over your current plan limit."}
+                        </p>
+                      ) : null}
+                    </div>
                   </TableCell>
 
                   <TableCell className={tableCellMutedClass}>
@@ -230,9 +237,11 @@ export function ServicesTable({
                         type="button"
                         size="icon"
                         variant="ghost"
+                        disabled={service.isPlanSuspended}
                         onClick={() => onEdit?.(service)}
                         aria-label={`Edit ${service.name}`}
-                        className="rounded bg-brand-panel-strong p-2 text-foreground transition-all hover:bg-primary hover:text-primary-foreground"
+                        title={service.isPlanSuspended ? "Upgrade your plan to edit this suspended service." : `Edit ${service.name}`}
+                        className="rounded bg-brand-panel-strong p-2 text-foreground transition-all hover:bg-primary hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-brand-panel-strong disabled:hover:text-foreground"
                       >
                         <Pen className="h-4 w-4" />
                       </Button>
@@ -241,10 +250,11 @@ export function ServicesTable({
                         type="button"
                         size="icon"
                         variant="ghost"
-                        disabled={deletingId === service.databaseId}
+                        disabled={deletingId === service.databaseId || service.isPlanSuspended}
                         onClick={() => onDelete?.(service)}
                         aria-label={`Delete ${service.name}`}
-                        className="rounded bg-brand-panel-strong p-2 text-foreground transition-all hover:bg-red-500"
+                        title={service.isPlanSuspended ? "Suspended services are preserved and cannot be deleted while over plan limit." : `Delete ${service.name}`}
+                        className="rounded bg-brand-panel-strong p-2 text-foreground transition-all hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-brand-panel-strong"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

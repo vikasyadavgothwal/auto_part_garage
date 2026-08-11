@@ -1,4 +1,4 @@
-export type GarageServiceStatus = "active" | "inactive"
+export type GarageServiceStatus = "active" | "inactive" | "plan_suspended"
 
 export type GarageServiceRecord = {
   id: string
@@ -14,6 +14,8 @@ export type GarageServiceRecord = {
   reviewCount?: number
   reviews?: GarageServiceReview[]
   status: GarageServiceStatus
+  planSuspendedAt?: string | null
+  planSuspensionReason?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -53,6 +55,9 @@ export type GarageServiceTableItem = {
   status: string
   statusValue: GarageServiceStatus
   statusClass: string
+  planSuspendedAt?: string | null
+  planSuspensionReason?: string | null
+  isPlanSuspended: boolean
 }
 
 export const formatMoney = (cents: number, currency = "AED") =>
@@ -74,11 +79,16 @@ export const formatGarageService = (
   ratingAverage: service.ratingAverage ?? 0,
   reviewCount: service.reviewCount ?? 0,
   reviews: service.reviews ?? [],
-  status: service.status === "active" ? "Active" : "Inactive",
+  status: service.status === "plan_suspended" ? "Suspended by plan" : service.status === "active" ? "Active" : "Inactive",
   statusValue: service.status,
+  planSuspendedAt: service.planSuspendedAt ?? null,
+  planSuspensionReason: service.planSuspensionReason ?? null,
+  isPlanSuspended: service.status === "plan_suspended",
   statusClass:
     service.status === "active"
       ? "border-brand-success/20 bg-brand-success/10 text-brand-success hover:bg-brand-success/10"
+      : service.status === "plan_suspended"
+        ? "border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/10"
       : "border-brand-muted/20 bg-brand-muted/10 text-brand-muted hover:bg-brand-muted/10",
 })
 

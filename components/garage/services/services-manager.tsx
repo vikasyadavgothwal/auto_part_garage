@@ -101,6 +101,10 @@ export function ServicesManager({
     useState<GarageServiceTableItem | null>(null)
   const [, setError] = useState("")
   const stats = useMemo(() => buildServiceStats(services), [services])
+  const planSuspendedServices = useMemo(
+    () => services.filter((service) => service.isPlanSuspended),
+    [services],
+  )
 
   const openCreateDialog = () => {
     setEditingService(null)
@@ -110,6 +114,10 @@ export function ServicesManager({
   }
 
   const openEditDialog = (service: GarageServiceTableItem) => {
+    if (service.isPlanSuspended) {
+      toast.error(service.planSuspensionReason || "This service is temporarily inactive because it is over your current plan limit. Upgrade your plan to restore it.")
+      return
+    }
     setEditingService(service)
     setForm(formFromService(service))
     setError("")
@@ -259,6 +267,18 @@ export function ServicesManager({
           {actionLabel}
         </Button>
       </div>
+
+      {planSuspendedServices.length ? (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+          <p className="font-semibold text-amber-200">Some services are temporarily inactive due to your current plan.</p>
+          <p className="mt-1 text-amber-100/90">
+            Your Free plan allows limited active services. Extra services are safely preserved but hidden from customer booking until your plan is upgraded or admin increases your limit.
+          </p>
+          <p className="mt-2 text-xs text-amber-100/80">
+            Suspended services: {planSuspendedServices.map((service) => service.name).join(", ")}
+          </p>
+        </div>
+      ) : null}
 
       <ServiceStats stats={stats} />
       <ServicesTable

@@ -11,8 +11,8 @@ import {
   BarChart3,
   Headphones,
   Plug,
-  Search,
-  Shield,
+  KeyRound,
+  CirclePlus,
   Users,
   ShieldCheck,
   BadgeCheck,
@@ -38,14 +38,15 @@ const items = [
   { title: "Services", url: appRoutes.services, icon: Wrench, menuKey: "services" },
   { title: "Reviews", url: appRoutes.reviews, icon: Star, menuKey: "reviews" },
   { title: "Reports", url: appRoutes.reports, icon: BarChart3, menuKey: "reports" },
-  { title: "Saved Searches", url: appRoutes.savedSearches, icon: Search, menuKey: "saved-searches" },
   { title: "Integrations", url: appRoutes.integrations, icon: Plug, menuKey: "integrations" },
-  { title: "Security", url: appRoutes.security, icon: Shield, menuKey: "security" },
+  { title: "API Keys", url: appRoutes.apiKeys, icon: KeyRound, menuKey: "api-keys" },
+  { title: "Paid Add-ons", url: appRoutes.addOns, icon: CirclePlus, menuKey: "add-ons" },
   { title: "Support", url: appRoutes.support, icon: Headphones, menuKey: "support" },
   { title: "Staff", url: appRoutes.staff, icon: Users, menuKey: "staff" },
   { title: "Roles", url: appRoutes.roles, icon: ShieldCheck, menuKey: "roles" },
   { title: "Plans", url: appRoutes.plans, icon: BadgeCheck, menuKey: "plans" },
 ]
+const fallbackMenuKeys = items.map((item) => item.menuKey)
 
 export function AppSidebar({
   visibleMenus = [],
@@ -57,7 +58,8 @@ export function AppSidebar({
   isOwner?: boolean
 }) {
   const currentPath = stripBasePath(usePathname())
-  const visibleMenuSet = new Set(["settings", ...(isOwner ? ["overview", "plans"] : []), ...visibleMenus])
+  const effectiveVisibleMenus = visibleMenus.length ? visibleMenus : isOwner || !planName ? fallbackMenuKeys : []
+  const visibleMenuSet = new Set(["settings", ...(isOwner ? ["overview", "plans", "add-ons", "api-keys"] : []), ...effectiveVisibleMenus])
 
   return (
     <Sidebar className="border-sidebar-border bg-brand-panel text-foreground">

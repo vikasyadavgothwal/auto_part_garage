@@ -5,6 +5,9 @@ import { requestBackend } from "@/lib/auth/backend"
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
+  if (!request.headers.get("cookie")) {
+    return Response.json({ ok: false, message: "Unauthorized" }, { status: 401 })
+  }
   const backend = await requestBackend("/api/v1/notifications/stream", {
     cookieHeader: request.headers.get("cookie"),
     userAgent: request.headers.get("user-agent"),

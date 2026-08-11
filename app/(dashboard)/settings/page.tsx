@@ -3,7 +3,6 @@ import { cookies } from "next/headers"
 import { ChangePasswordCard } from "@/components/garage/settings/change-password-card"
 import { SettingsManager } from "@/components/garage/settings/settings-manager"
 import { AccountSettingsCard } from "@/components/shared/account-settings-card"
-import { LoginSecurityCard } from "@/components/shared/login-security-card"
 import { requestBackend } from "@/lib/auth/backend"
 import { getGarageSettings } from "@/lib/garage-settings.server"
 
@@ -38,7 +37,6 @@ export default async function SettingsPage() {
     <div className="space-y-8">
       {profile ? <SettingsManager profile={profile} /> : null}
       <AccountSettingsCard initialAccount={context.account} />
-      <LoginSecurityCard />
       <ChangePasswordCard />
     </div>
   )

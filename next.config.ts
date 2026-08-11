@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim();
 const basePath = configuredBasePath || undefined;
@@ -30,7 +31,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname, ".."),
+  },
   ...(basePath ? { basePath } : {}),
+  experimental: {
+    externalDir: true,
+  },
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

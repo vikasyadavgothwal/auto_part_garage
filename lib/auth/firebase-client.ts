@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app"
-import { getAuth, reload, signInWithEmailAndPassword, signOut } from "firebase/auth"
+import { getAuth, GoogleAuthProvider, inMemoryPersistence, reload, setPersistence, signInWithEmailAndPassword, signInWithPopup, signOut } from "firebase/auth"
 
 const config = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -26,20 +26,28 @@ export const getFirebaseAuthDiagnostics = () => ({
 })
 
 export async function createFirebaseLoginPayload(email: string, password: string) {
-  const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email, password)
+  const auth = getFirebaseAuth()
+  await setPersistence(auth, inMemoryPersistence)
+  const credential = await signInWithEmailAndPassword(auth, email, password)
   await reload(credential.user)
   if (credential.user.email && !credential.user.emailVerified) {
     throw new Error("Verify your email before signing in.")
   }
 
-  const key = "auto-parts-pro-installation-id"
-  let installationId = localStorage.getItem(key)
-  if (!installationId) {
-    installationId = crypto.randomUUID()
-    localStorage.setItem(key, installationId)
-  }
+  const firebaseIdToken = await credential.user.getIdToken(true)
+  await signOut(auth).catch(() => undefined)
+  return { firebaseIdToken }
+}
 
-  return { firebaseIdToken: await credential.user.getIdToken(true), installationId }
+export async function createFirebaseGoogleLoginPayload() {
+  const auth = getFirebaseAuth()
+  await setPersistence(auth, inMemoryPersistence)
+  const provider = new GoogleAuthProvider()
+  provider.setCustomParameters({ prompt: "select_account" })
+  const credential = await signInWithPopup(auth, provider)
+  const firebaseIdToken = await credential.user.getIdToken(true)
+  await signOut(auth).catch(() => undefined)
+  return { firebaseIdToken }
 }
 
 export async function signOutFirebase() {
