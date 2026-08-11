@@ -47,6 +47,7 @@ const items = [
   { title: "Plans", url: appRoutes.plans, icon: BadgeCheck, menuKey: "plans" },
 ]
 const fallbackMenuKeys = items.map((item) => item.menuKey)
+const fallbackMenuKeysWithoutApiAccess = fallbackMenuKeys.filter((menuKey) => menuKey !== "api-keys")
 
 export function AppSidebar({
   visibleMenus = [],
@@ -58,8 +59,9 @@ export function AppSidebar({
   isOwner?: boolean
 }) {
   const currentPath = stripBasePath(usePathname())
-  const effectiveVisibleMenus = visibleMenus.length ? visibleMenus : isOwner || !planName ? fallbackMenuKeys : []
-  const visibleMenuSet = new Set(["settings", ...(isOwner ? ["overview", "plans", "add-ons", "api-keys"] : []), ...effectiveVisibleMenus])
+  const effectiveVisibleMenus = visibleMenus.length ? visibleMenus : isOwner || !planName ? fallbackMenuKeysWithoutApiAccess : []
+  const visibleMenuSet = new Set(["settings", ...(isOwner ? ["overview", "plans", "add-ons"] : []), ...effectiveVisibleMenus])
+  if (/\bfree\b/i.test(planName ?? "")) visibleMenuSet.delete("api-keys")
 
   return (
     <Sidebar className="border-sidebar-border bg-brand-panel text-foreground">

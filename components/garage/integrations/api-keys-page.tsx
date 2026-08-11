@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState, type FormEvent } from "react"
-import Link from "next/link"
 import { Copy, KeyRound, Trash2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { appPath, appRoutes } from "@/lib/routes"
+import { appPath } from "@/lib/routes"
 
 type BusinessAccess = { businessAccount: { id: string; name: string; type: string; plan: { name: string } } }
 type ApiAccess = { allowed: boolean; code: string; message: string; apiTier: string; availableScopes: Array<{ key: string; label: string }> }
@@ -111,15 +110,6 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
 
       {notice ? <Card className="border-amber-500/30 bg-amber-500/10"><CardContent className="p-4 text-sm text-amber-700">{notice}</CardContent></Card> : null}
 
-      {apiAccess && !apiAccess.allowed ? (
-        <Card className="border-destructive/30">
-          <CardHeader>
-            <CardTitle className="text-base">Billing action required</CardTitle>
-            <CardDescription>{apiAccess.message}</CardDescription>
-          </CardHeader>
-          <CardContent><Button asChild><Link href={appRoutes.addOns}>Request API add-on</Link></Button></CardContent>
-        </Card>
-      ) : null}
 
       <Card>
         <CardHeader>

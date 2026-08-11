@@ -27,7 +27,6 @@ type SupportContent = { supportTier: string; supportSummary: string; ticketCateg
 const limitFeatureKey = (metric: string, target: number) => `limit.${metric}.${target}`
 
 const commonAddOnFeatureKeys = new Set([
-  "business.saved-searches.create",
   "integrations.manage",
   "api.standard",
   "api.enterprise",
@@ -40,7 +39,7 @@ const commonAddOnFeatureKeys = new Set([
   "reports.activity",
   "support.priority",
 ])
-const commonAddOnMetrics = new Set(["staff", "roles", "permissions", "integrations", "savedSearches"])
+const commonAddOnMetrics = new Set(["staff", "roles", "permissions", "integrations"])
 const addOnSections = (accountType: string, limits: LimitAddOn[], features: Array<{ key: string; label: string }>) => [
   {
     title: "Common add-ons",
