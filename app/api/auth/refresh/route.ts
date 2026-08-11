@@ -54,6 +54,6 @@ export async function GET(request: NextRequest) {
     ? `${appPath(appRoutes.login)}?error=owner_disabled`
     : appPath(appRoutes.login)
   const response = NextResponse.redirect(new URL(result.ok ? safeReturn : loginPath, request.url))
-  getSetCookieHeaders(result.response.headers).forEach((value) => response.headers.append("set-cookie", value))
+  getSetCookieHeaders(result.response.headers).forEach((value: string) => response.headers.append("set-cookie", value))
   return response
 }
