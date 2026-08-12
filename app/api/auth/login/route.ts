@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-import { applySetCookieHeaders, getSetCookieHeaders, requestBackend } from "@/lib/auth/backend"
+import { applySetCookieHeaders, getSetCookieHeaders, mergeCookieHeader, requestBackend } from "@/lib/auth/backend"
 import type { AuthApiPayload } from "@/lib/auth/types"
 
 export const dynamic = "force-dynamic"
