@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-import { applySetCookieHeaders, getSetCookieHeaders, mergeCookieHeader, requestBackend } from "@/lib/auth/backend"
+import { applySetCookieHeaders, getSetCookieHeaders, requestBackend } from "@/lib/auth/backend"
 import type { AuthApiPayload } from "@/lib/auth/types"
 
 export const dynamic = "force-dynamic"
@@ -13,14 +13,6 @@ async function readBackendJson(response: Response): Promise<AuthApiPayload | nul
 
   try {
     return (await response.json()) as AuthApiPayload
-  } catch {
-    return null
-  }
-}
-
-async function readBusinessAccessJson(response: Response): Promise<{ ok: boolean; access?: Array<{ businessAccount?: { type?: string; accountType?: string; plan?: { accountType?: string } }; accountType?: string }> } | null> {
-  try {
-    return (await response.json()) as { ok: boolean; access?: Array<{ businessAccount?: { type?: string; accountType?: string; plan?: { accountType?: string } }; accountType?: string }> }
   } catch {
     return null
   }
@@ -100,31 +92,6 @@ export async function POST(request: NextRequest) {
       { ok: false, success: false, message: "This account does not have garage access." },
       { status: 403 },
     )
-  }
-
-  if (backend.ok && payload.ok) {
-    const access = await requestBackend("/api/v1/business/access", {
-      cookieHeader: mergeCookieHeader(null, issuedCookies),
-      userAgent: request.headers.get("user-agent"),
-      forwardedFor,
-    })
-    const accessPayload = await readBusinessAccessJson(access)
-    const hasGarageAccess = Boolean(access.ok && accessPayload?.ok && accessPayload.access?.some((item) => {
-      const accountType = item.businessAccount?.type ?? item.businessAccount?.accountType ?? item.accountType ?? item.businessAccount?.plan?.accountType
-      return accountType === "Garage"
-    }))
-    if (!hasGarageAccess) {
-      await requestBackend("/api/v1/user/auth/logout", {
-        method: "POST",
-        cookieHeader: mergeCookieHeader(null, issuedCookies),
-        userAgent: request.headers.get("user-agent"),
-        forwardedFor,
-      })
-      return NextResponse.json(
-        { ok: false, success: false, message: "Your account is disabled by your owner." },
-        { status: 403 },
-      )
-    }
   }
 
   const response = NextResponse.json(payload, { status: backend.status })

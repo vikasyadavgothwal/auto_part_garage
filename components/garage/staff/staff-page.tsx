@@ -2,12 +2,12 @@
 
 import { useMemo, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
-import { EllipsisVertical, Eye, Pencil, Search, Trash2, UserCheck, UserX } from "lucide-react"
+import { Check, EllipsisVertical, Eye, Pencil, Search, Trash2, UserCheck, UserX, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { appRoutes } from "@/lib/routes"
@@ -35,20 +35,6 @@ function statusMessage(access: BusinessAccessEntry | undefined) {
 function formatLimit(used: number | undefined, limit: number | null | undefined) {
   if (limit === null || limit === undefined) return `${used ?? 0}/unlimited`
   return `${used ?? 0}/${limit}`
-}
-
-function selectedRoleLabel(selectedRoles: Set<string>, roles: StaffRoleItem[]) {
-  if (selectedRoles.size === 0) return "Select roles"
-  const map = new Map(roles.map((role) => [role.id, role.name]))
-  const names = Array.from(selectedRoles).map((id) => map.get(id) ?? "Role")
-  const visible = names.slice(0, 3)
-  const extra = Math.max(names.length - 3, 0)
-  return extra ? `${visible.join(", ")} +${extra} more` : visible.join(", ")
-}
-
-function selectedRoleNames(selectedRoles: Set<string>, roles: StaffRoleItem[]) {
-  const map = new Map(roles.map((role) => [role.id, role.name]))
-  return Array.from(selectedRoles).map((id) => map.get(id) ?? "Role")
 }
 
 export function GarageStaffPage({ access, membersPayload, rolesPayload }: { access: BusinessAccessEntry | undefined; membersPayload: MembersResponse; rolesPayload: RolesResponse }) {
@@ -211,5 +197,5 @@ export function GarageStaffPage({ access, membersPayload, rolesPayload }: { acce
 }
 
 function RoleSelector({ roles, filteredRoles, selectedRoles, roleQuery, setRoleQuery, toggleRoleSelection }: { roles: StaffRoleItem[]; filteredRoles: StaffRoleItem[]; selectedRoles: Set<string>; roleQuery: string; setRoleQuery: (value: string) => void; toggleRoleSelection: (roleId: string) => void }) {
-  return <div><div className="flex items-center justify-between gap-3"><p className="text-sm font-medium">Assign roles</p><span className="rounded-sm border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">{selectedRoles.size} selected</span></div><div className="mt-2 space-y-3 rounded-md border border-border bg-muted/30 p-3"><DropdownMenu modal={false}><DropdownMenuTrigger asChild><Button type="button" variant="outline" className="min-h-12 w-full justify-between whitespace-normal px-3 text-left">{selectedRoleLabel(selectedRoles, roles)}</Button></DropdownMenuTrigger><DropdownMenuContent className="w-[min(420px,calc(100vw-3rem))] p-0" align="start"><div className="border-b border-border p-3"><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={roleQuery} onChange={(event) => setRoleQuery(event.target.value)} onKeyDown={(event) => event.stopPropagation()} placeholder="Search roles" className="h-10 pl-9" /></div></div><div className="max-h-56 overflow-y-auto p-2">{filteredRoles.length ? filteredRoles.map((role) => <DropdownMenuCheckboxItem key={role.id} checked={selectedRoles.has(role.id)} onCheckedChange={() => toggleRoleSelection(role.id)} onSelect={(event) => event.preventDefault()} className="min-h-11 rounded-sm">{role.name}</DropdownMenuCheckboxItem>) : <p className="px-3 py-6 text-center text-sm text-muted-foreground">No roles found.</p>}</div></DropdownMenuContent></DropdownMenu>{selectedRoles.size ? <div className="flex max-h-20 flex-wrap gap-2 overflow-y-auto">{selectedRoleNames(selectedRoles, roles).map((roleName) => <span key={roleName} className="rounded-sm border border-border bg-background px-2 py-1 text-xs">{roleName}</span>)}</div> : null}</div></div>
+  return <div><div className="flex items-center justify-between gap-3"><p className="text-sm font-medium">Assign roles</p><span className="rounded-sm border border-border bg-muted px-2 py-1 text-xs text-muted-foreground">{selectedRoles.size} selected</span></div><div className="mt-2 space-y-3 rounded-md border border-border bg-muted/30 p-3"><div className="flex min-h-8 flex-wrap gap-2">{roles.filter((role) => selectedRoles.has(role.id)).map((role) => <button key={role.id} type="button" onClick={() => toggleRoleSelection(role.id)} className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs text-primary transition hover:bg-primary/20" aria-label={`Remove ${role.name}`}>{role.name}<X className="size-3.5" /></button>)}{!selectedRoles.size ? <p className="text-xs text-muted-foreground">No roles selected yet. Choose at least one role for this staff account.</p> : null}</div><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input value={roleQuery} onChange={(event) => setRoleQuery(event.target.value)} placeholder="Search roles" className="h-10 pl-9" /></div><div className="flex items-center justify-between gap-3 text-xs text-muted-foreground"><span>{filteredRoles.length} role{filteredRoles.length === 1 ? "" : "s"} shown</span><div className="flex gap-1"><Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedRoles((current) => new Set([...current, ...filteredRoles.map((role) => role.id)]))}>Select shown</Button><Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setSelectedRoles(new Set())}>Clear</Button></div></div><div className="grid max-h-56 gap-2 overflow-y-auto pr-1">{filteredRoles.length ? filteredRoles.map((role) => { const selected = selectedRoles.has(role.id); return <button key={role.id} type="button" aria-pressed={selected} onClick={() => toggleRoleSelection(role.id)} className={`flex items-start gap-3 rounded-md border p-3 text-left transition ${selected ? "border-primary/40 bg-primary/10" : "border-border bg-background hover:border-primary/30 hover:bg-muted/50"}`}><span className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border ${selected ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"}`}>{selected ? <Check className="size-3.5" /> : null}</span><span className="min-w-0 text-sm font-medium text-foreground">{role.name}</span></button> }) : <p className="px-3 py-6 text-center text-sm text-muted-foreground">No roles found.</p>}</div></div></div>
 }
