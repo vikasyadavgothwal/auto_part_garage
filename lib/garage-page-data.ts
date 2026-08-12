@@ -86,13 +86,26 @@ export type BookingsPageData = {
   }>
   bookings: Array<{
     id: string
+    backendId?: string
+    customerId?: string | null
     date: string
     time: string
     customer: string
+    customerEmail?: string | null
+    customerPhone?: string | null
     vehicle: string
+    vehicleVin?: string | null
     service: string
+    duration?: string
+    notes?: string | null
     revenue: string
     status: string
+    rawStatus?:
+      | "pending"
+      | "pending_slot_selection"
+      | "confirmed"
+      | "completed"
+      | "cancelled"
     statusClass: string
   }>
   calendarView: {
@@ -151,6 +164,7 @@ export type ReviewsPageData = {
     status: string
     statusClass: string
     actionLabel: string
+    reply?: string | null
   }>
   reputationTips: string[]
 }

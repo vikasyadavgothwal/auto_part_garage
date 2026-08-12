@@ -1,24 +1,17 @@
-import { Plus } from "lucide-react"
-
-import { ServiceManagementTipsCard } from "@/components/garage/services/service-management-tips-card"
-import { ServiceStats } from "@/components/garage/services/service-stats"
-import { ServicesTable } from "@/components/garage/services/services-table"
-import { ActionPageHeading } from "@/components/garage/shared/action-page-heading"
+import { ServicesManager } from "@/components/garage/services/services-manager"
 import { servicesPageData } from "@/lib/garage-page-data"
+import { getGarageServices } from "@/lib/garage-services.server"
 
-export default function GarageServicesPage() {
+export default async function GarageServicesPage() {
+  const services = await getGarageServices()
+
   return (
-    <div className="space-y-8">
-      <ActionPageHeading
-        title={servicesPageData.title}
-        description={servicesPageData.description}
-        actionLabel={servicesPageData.primaryActionLabel}
-        icon={Plus}
-      />
-
-      <ServiceStats stats={servicesPageData.stats} />
-      <ServicesTable services={servicesPageData.services} />
-      <ServiceManagementTipsCard tips={servicesPageData.tips} />
-    </div>
+    <ServicesManager
+      title={servicesPageData.title}
+      description={servicesPageData.description}
+      actionLabel={servicesPageData.primaryActionLabel}
+      tips={servicesPageData.tips}
+      initialServices={services}
+    />
   )
 }

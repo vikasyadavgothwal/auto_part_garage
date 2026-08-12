@@ -1,67 +1,49 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { cookies } from "next/headers"
 
-export default function SettingsPage() {
+import { ChangePasswordCard } from "@/components/garage/settings/change-password-card"
+import { SettingsManager } from "@/components/garage/settings/settings-manager"
+import { AccountSettingsCard } from "@/components/shared/account-settings-card"
+import { requestBackend } from "@/lib/auth/backend"
+import { requireGarageUser } from "@/lib/auth/server"
+import { getGarageSettings } from "@/lib/garage-settings.server"
+
+type BusinessAccessPayload = {
+  ok: boolean
+  access?: Array<{ businessAccount: { type: string; isOwner?: boolean } }>
+}
+
+async function getSettingsContext() {
+  const cookieHeader = (await cookies()).toString()
+  const accessResponse = await requestBackend("/api/v1/business/access", { cookieHeader }).catch(() => null)
+  const accessPayload = accessResponse?.ok ? ((await accessResponse.json()) as BusinessAccessPayload) : null
+  return {
+    isOwner: Boolean(accessPayload?.access?.find((item) => item.businessAccount.type === "Garage")?.businessAccount.isOwner),
+  }
+}
+
+export default async function SettingsPage() {
+  const [user, context] = await Promise.all([requireGarageUser(), getSettingsContext()])
+  const profile = context.isOwner ? await getGarageSettings() : null
+
+  if (profile) {
+    return (
+      <div className="space-y-8">
+        <SettingsManager profile={profile} />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="mb-2 text-3xl font-bold text-foreground">Workspace Settings</h1>
-        <p className="text-brand-muted">
-          Manage the fleet workspace details used across the dashboard.
-        </p>
-      </div>
-
-      <Card className="rounded-lg border border-border bg-brand-panel shadow-none">
-        <CardHeader>
-          <CardTitle className="text-foreground">Organization Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="company-name">Company Name</Label>
-            <Input
-              id="company-name"
-              defaultValue="ABC Garage"
-              className="border-border bg-brand-surface"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="ops-email">Operations Email</Label>
-            <Input
-              id="ops-email"
-              type="email"
-              defaultValue="ops@autopartspro.com"
-              className="border-border bg-brand-surface"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="currency">Preferred Currency</Label>
-            <Input
-              id="currency"
-              defaultValue="AED"
-              className="border-border bg-brand-surface"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="timezone">Timezone</Label>
-            <Input
-              id="timezone"
-              defaultValue="America/Chicago"
-              className="border-border bg-brand-surface"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <Button className="bg-primary text-primary-foreground hover:bg-brand-primary-hover">
-              Save Settings
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <AccountSettingsCard
+        initialAccount={{
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+        }}
+        allowEmail={false}
+      />
+      <ChangePasswordCard />
     </div>
   )
 }

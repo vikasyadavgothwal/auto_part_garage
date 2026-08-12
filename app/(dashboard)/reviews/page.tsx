@@ -3,9 +3,16 @@ import { ReputationTipsCard } from "@/components/garage/reviews/reputation-tips-
 import { ReviewStats } from "@/components/garage/reviews/review-stats"
 import { ReviewsTable } from "@/components/garage/reviews/reviews-table"
 import { PageHeading } from "@/components/garage/shared/page-heading"
-import { reviewsPageData } from "@/lib/garage-page-data"
+import {
+  buildReviewsPageData,
+  getGarageReviews,
+} from "@/lib/garage-reviews.server"
 
-export default function GarageReviewsPage() {
+export const dynamic = "force-dynamic"
+
+export default async function GarageReviewsPage() {
+  const reviewsPageData = buildReviewsPageData(await getGarageReviews())
+
   return (
     <div className="space-y-8">
       <PageHeading

@@ -20,6 +20,11 @@ export function RecentReviewsCard({ reviews }: RecentReviewsCardProps) {
         />
 
         <div className="space-y-4">
+          {reviews.length === 0 ? (
+            <div className="rounded-xl border border-border bg-background p-4 text-sm text-brand-muted">
+              No customer reviews yet.
+            </div>
+          ) : null}
           {reviews.map((review) => (
             <div
               key={`${review.name}-${review.date}`}

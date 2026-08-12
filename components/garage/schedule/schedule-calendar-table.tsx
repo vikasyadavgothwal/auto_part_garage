@@ -47,8 +47,8 @@ export function ScheduleCalendarTable({
   appointments,
 }: ScheduleCalendarTableProps) {
   return (
-    <Card className="surface-card overflow-hidden">
-      <div className="overflow-x-auto">
+    <Card className="surface-card min-w-0 overflow-hidden py-0">
+      <div className="w-full max-w-full overflow-x-auto">
         <table className="w-full min-w-[1100px]">
           <thead>
             <tr className="border-b border-border">

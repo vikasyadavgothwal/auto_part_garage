@@ -37,7 +37,11 @@ export function VehicleForm({
   const [values, setValues] = useState<VehicleFormValues>(initialValues)
 
   useEffect(() => {
-    setValues(initialValues)
+    const syncValues = window.setTimeout(() => {
+      setValues(initialValues)
+    }, 0)
+
+    return () => window.clearTimeout(syncValues)
   }, [initialValues])
 
   function updateValue<Key extends keyof VehicleFormValues>(
