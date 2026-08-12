@@ -56,6 +56,11 @@ type UploadPayload = {
   message?: string
 }
 
+type PendingImage = {
+  file: File
+  previewUrl: string
+}
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MOBILE_PATTERN = /^\+\d{8,18}$/
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -63,6 +68,7 @@ const PLACE_PATTERN = /^[A-Za-z][A-Za-z\s'.-]*$/
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
 const MAX_GALLERY_UPLOADS = 12
+const MAX_GALLERY_IMAGES_TOTAL = 20
 const MAX_GARAGE_NAME_LENGTH = 160
 const MAX_EMAIL_LENGTH = 254
 const MAX_MOBILE_LOCAL_LENGTH = 14
@@ -109,6 +115,11 @@ const normalizeNumberText = (value: string, maxLength: number) =>
   value.replace(/\D/g, "").slice(0, maxLength)
 
 const numberFromDigits = (value: string) => Number(normalizeNumberText(value, 10) || 0)
+
+const createPendingImage = (file: File): PendingImage => ({
+  file,
+  previewUrl: URL.createObjectURL(file),
+})
 
 const closeOptionsFor = (openTime: string) =>
   TIME_OPTIONS.filter((option) => option.value > openTime)
@@ -207,6 +218,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
   const [isUploadingGarageImage, setIsUploadingGarageImage] = useState(false)
   const [isUploadingGallery, setIsUploadingGallery] = useState(false)
+  const [pendingGarageImage, setPendingGarageImage] = useState<PendingImage | null>(null)
+  const [pendingGalleryImages, setPendingGalleryImages] = useState<PendingImage[]>([])
 
   const setField = <Key extends keyof GarageProfileFormValues>(
     key: Key,
@@ -221,6 +234,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       recaptchaVerifier.current = null
     }
   }, [])
+
+  const makePendingImage = (file: File) => createPendingImage(file)
 
   const clearRecaptchaVerifier = () => {
     recaptchaVerifier.current?.clear()
@@ -333,7 +348,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
         return `${label} must be ${MAX_PLACE_LENGTH} characters or fewer`
       }
     }
-    if (form.pincode.length > MAX_PINCODE_LENGTH) {
+    if (form.pincode && !/^\d{1,12}$/.test(form.pincode)) {
       return `Pincode must be ${MAX_PINCODE_LENGTH} digits or fewer`
     }
     if (form.jobCompletedNumber < 0 || !Number.isInteger(form.jobCompletedNumber)) {
@@ -366,11 +381,66 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     return ""
   }
 
-  const persistSettings = async () => {
+  const uploadPendingImages = async (
+    values: GarageProfileFormValues,
+  ): Promise<GarageProfileFormValues> => {
+    if (!pendingGarageImage && pendingGalleryImages.length === 0) return values
+
+    setIsUploadingGarageImage(Boolean(pendingGarageImage))
+    setIsUploadingGallery(pendingGalleryImages.length > 0)
+
+    try {
+      const formData = new FormData()
+      if (pendingGarageImage) {
+        formData.append("garageImage", pendingGarageImage.file)
+      }
+      pendingGalleryImages.forEach((image) =>
+        formData.append("galleryImages", image.file),
+      )
+
+      const response = await authenticatedFetch(appPath("/api/settings/images"), {
+        method: "POST",
+        body: formData,
+      })
+      const payload = (await response.json()) as UploadPayload
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.message || "Unable to upload images")
+      }
+
+      const nextForm: GarageProfileFormValues = {
+        ...values,
+        ...(payload.garageImage
+          ? {
+              garageImageUrl: payload.garageImage.url,
+              garageImageKey: payload.garageImage.key,
+            }
+          : {}),
+        galleryImageUrls: [
+          ...values.galleryImageUrls,
+          ...(payload.galleryImages ?? []).map((image) => image.url),
+        ].slice(0, MAX_GALLERY_IMAGES_TOTAL),
+        galleryImageKeys: [
+          ...values.galleryImageKeys,
+          ...(payload.galleryImages ?? []).map((image) => image.key),
+        ].slice(0, MAX_GALLERY_IMAGES_TOTAL),
+      }
+      setPendingGarageImage(null)
+      setPendingGalleryImages([])
+      if (pendingGarageImage) URL.revokeObjectURL(pendingGarageImage.previewUrl)
+      pendingGalleryImages.forEach((image) => URL.revokeObjectURL(image.previewUrl))
+      setForm(nextForm)
+      return nextForm
+    } finally {
+      setIsUploadingGarageImage(false)
+      setIsUploadingGallery(false)
+    }
+  }
+
+  const persistSettings = async (values: GarageProfileFormValues) => {
     const response = await authenticatedFetch(appPath("/api/settings"), {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(payloadFromForm(form)),
+      body: JSON.stringify(payloadFromForm(values)),
     })
     const payload = (await response.json()) as SettingsPayload
     if (!response.ok || !payload.ok || !payload.profile) {
@@ -393,7 +463,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     setIsSaving(true)
 
     try {
-      await persistSettings()
+      const values = await uploadPendingImages(form)
+      await persistSettings(values)
       toast.success("Settings saved")
     } catch (saveError) {
       const errorMessage =
@@ -542,7 +613,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     }
   }
 
-  const uploadImages = async (
+  const uploadImages = (
     files: FileList | null,
     type: "garageImage" | "galleryImages",
   ) => {
@@ -552,6 +623,17 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     const selectedFiles = Array.from(files)
     if (!isGarageImage && selectedFiles.length > MAX_GALLERY_UPLOADS) {
       setError(`Upload at most ${MAX_GALLERY_UPLOADS} gallery images at once`)
+      toast.error(`Upload at most ${MAX_GALLERY_UPLOADS} gallery images at once`)
+      return
+    }
+    if (
+      !isGarageImage &&
+      form.galleryImageUrls.length + pendingGalleryImages.length + selectedFiles.length >
+        MAX_GALLERY_IMAGES_TOTAL
+    ) {
+      const errorMessage = `Gallery can contain at most ${MAX_GALLERY_IMAGES_TOTAL} images`
+      setError(errorMessage)
+      toast.error(errorMessage)
       return
     }
     const invalidFile = selectedFiles.find(
@@ -559,54 +641,22 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     )
     if (invalidFile) {
       setError("Images must be JPG, PNG, or WebP and no larger than 5 MB each")
+      toast.error("Images must be JPG, PNG, or WebP and no larger than 5 MB each")
       return
     }
     if (isGarageImage) {
-      setIsUploadingGarageImage(true)
-    } else {
-      setIsUploadingGallery(true)
-    }
-
-    try {
-      const formData = new FormData()
-      if (isGarageImage) {
-        formData.append("garageImage", selectedFiles[0])
-      } else {
-        selectedFiles.forEach((file) => formData.append("galleryImages", file))
-      }
-      const response = await authenticatedFetch(appPath("/api/settings/images"), {
-        method: "POST",
-        body: formData,
+      const image = makePendingImage(selectedFiles[0])
+      setPendingGarageImage((current) => {
+        if (current) URL.revokeObjectURL(current.previewUrl)
+        return image
       })
-      const payload = (await response.json()) as UploadPayload
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.message || "Unable to upload images")
-      }
-      if (payload.garageImage) {
-        setField("garageImageUrl", payload.garageImage.url)
-        setField("garageImageKey", payload.garageImage.key)
-      }
-      if (payload.galleryImages?.length) {
-        setForm((current) => ({
-          ...current,
-          galleryImageUrls: [
-            ...current.galleryImageUrls,
-            ...payload.galleryImages!.map((image) => image.url),
-          ].slice(0, 20),
-          galleryImageKeys: [
-            ...current.galleryImageKeys,
-            ...payload.galleryImages!.map((image) => image.key),
-          ].slice(0, 20),
-        }))
-      }
-      toast.success("Images uploaded. Save settings to keep these changes.")
-    } catch (uploadError) {
-      const errorMessage = uploadError instanceof Error ? uploadError.message : "Unable to upload images"
-      setError(errorMessage)
-      toast.error(errorMessage)
-    } finally {
-      setIsUploadingGarageImage(false)
-      setIsUploadingGallery(false)
+      toast.success("Garage image selected. Save settings to upload it.")
+    } else {
+      setPendingGalleryImages((current) => [
+        ...current,
+        ...selectedFiles.map(makePendingImage),
+      ])
+      toast.success("Gallery images selected. Save settings to upload them.")
     }
   }
 
@@ -616,6 +666,24 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       galleryImageUrls: current.galleryImageUrls.filter((_, itemIndex) => itemIndex !== index),
       galleryImageKeys: current.galleryImageKeys.filter((_, itemIndex) => itemIndex !== index),
     }))
+  }
+
+  const removePendingGalleryImage = (index: number) => {
+    setPendingGalleryImages((current) => {
+      const removed = current[index]
+      if (removed) URL.revokeObjectURL(removed.previewUrl)
+      return current.filter((_, itemIndex) => itemIndex !== index)
+    })
+  }
+
+  const removeGarageImage = () => {
+    if (pendingGarageImage) {
+      URL.revokeObjectURL(pendingGarageImage.previewUrl)
+      setPendingGarageImage(null)
+      return
+    }
+    setField("garageImageUrl", "")
+    setField("garageImageKey", "")
   }
 
   const addCertification = () => {
@@ -650,9 +718,11 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     }))
   }
 
-  const garageImageSrc = form.garageImageKey
-    ? appPath(`/api/settings/images/view?key=${encodeURIComponent(form.garageImageKey)}`)
-    : form.garageImageUrl
+  const garageImageSrc = pendingGarageImage?.previewUrl || (
+    form.garageImageKey
+      ? appPath(`/api/settings/images/view?key=${encodeURIComponent(form.garageImageKey)}`)
+      : form.garageImageUrl
+  )
   const galleryImageSrc = (url: string, index: number) => {
     const key = form.galleryImageKeys[index]
     return key ? appPath(`/api/settings/images/view?key=${encodeURIComponent(key)}`) : url
@@ -669,6 +739,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     Boolean(form.mobile) &&
     normalizeMobileValue(form.mobile) !==
       normalizeMobileValue(currentProfile.mobile ?? "")
+  const hasPendingImages = Boolean(pendingGarageImage || pendingGalleryImages.length)
 
   return (
     <form className="space-y-8" onSubmit={saveSettings}>
@@ -808,7 +879,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
           <CardTitle className="text-foreground">Garage Details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2 md:col-span-2">
+          <div className="space-y-2">
             <Label htmlFor="garage-name">Garage name</Label>
             <Input
               id="garage-name"
@@ -818,6 +889,50 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               }
               maxLength={MAX_GARAGE_NAME_LENGTH}
               placeholder="Garage display name"
+              className="h-11 border-border bg-brand-surface"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="response-time">Response time</Label>
+            <Input
+              id="response-time"
+              value={form.responseTime}
+              onChange={(event) =>
+                setField("responseTime", normalizeLimitedText(event.target.value, MAX_RESPONSE_TIME_LENGTH))
+              }
+              maxLength={MAX_RESPONSE_TIME_LENGTH}
+              placeholder="Within 30 minutes"
+              className="h-11 border-border bg-brand-surface"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="jobs-completed">Job completed number</Label>
+            <Input
+              id="jobs-completed"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={form.jobCompletedNumber}
+              onChange={(event) =>
+                setField("jobCompletedNumber", numberFromDigits(event.target.value.slice(0, MAX_JOBS_COMPLETED_LENGTH)))
+              }
+              maxLength={MAX_JOBS_COMPLETED_LENGTH}
+              className="h-11 border-border bg-brand-surface"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="years-experience">Year of exp in no</Label>
+            <Input
+              id="years-experience"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={form.yearsExperience}
+              onChange={(event) =>
+                setField("yearsExperience", numberFromDigits(event.target.value.slice(0, MAX_YEARS_EXPERIENCE_LENGTH)))
+              }
+              maxLength={MAX_YEARS_EXPERIENCE_LENGTH}
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -910,50 +1025,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="response-time">Response time</Label>
-            <Input
-              id="response-time"
-              value={form.responseTime}
-              onChange={(event) =>
-                setField("responseTime", normalizeLimitedText(event.target.value, MAX_RESPONSE_TIME_LENGTH))
-              }
-              maxLength={MAX_RESPONSE_TIME_LENGTH}
-              placeholder="Within 30 minutes"
-              className="h-11 border-border bg-brand-surface"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="jobs-completed">Job completed number</Label>
-            <Input
-              id="jobs-completed"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={form.jobCompletedNumber}
-              onChange={(event) =>
-                setField("jobCompletedNumber", numberFromDigits(event.target.value.slice(0, MAX_JOBS_COMPLETED_LENGTH)))
-              }
-              maxLength={MAX_JOBS_COMPLETED_LENGTH}
-              className="h-11 border-border bg-brand-surface"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="years-experience">Year of exp in no</Label>
-            <Input
-              id="years-experience"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={form.yearsExperience}
-              onChange={(event) =>
-                setField("yearsExperience", numberFromDigits(event.target.value.slice(0, MAX_YEARS_EXPERIENCE_LENGTH)))
-              }
-              maxLength={MAX_YEARS_EXPERIENCE_LENGTH}
-              className="h-11 border-border bg-brand-surface"
-            />
-          </div>
-
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="garage-image">Garage image</Label>
             <div className="rounded-lg border border-dashed border-border bg-brand-surface p-4">
@@ -961,7 +1032,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 id="garage-image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                onChange={(event) => uploadImages(event.target.files, "garageImage")}
+                onChange={(event) => {
+                  uploadImages(event.target.files, "garageImage")
+                  event.currentTarget.value = ""
+                }}
                 className="sr-only"
               />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -976,15 +1050,19 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 <Button asChild type="button" variant="outline" className="gap-2">
                   <label htmlFor="garage-image" className="cursor-pointer">
                     <ImagePlus className="size-4" />
-                    {form.garageImageUrl ? "Replace image" : "Select image"}
+                    {pendingGarageImage || form.garageImageUrl ? "Replace image" : "Select image"}
                   </label>
                 </Button>
               </div>
               {isUploadingGarageImage ? (
-                <p className="mt-3 text-sm text-brand-muted">Uploading...</p>
+                <p className="mt-3 text-sm text-brand-muted">Uploading on save...</p>
+              ) : pendingGarageImage ? (
+                <p className="mt-3 text-sm text-brand-muted">
+                  Selected {pendingGarageImage.file.name}. Save settings to upload it.
+                </p>
               ) : null}
             </div>
-            {form.garageImageUrl ? (
+            {garageImageSrc ? (
               <div className="overflow-hidden rounded-lg border border-border bg-brand-surface shadow-sm">
                 <div
                   className="aspect-[16/9] bg-cover bg-center"
@@ -993,16 +1071,13 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 />
                 <div className="flex items-center justify-between gap-3 p-2">
                   <span className="min-w-0 flex-1 truncate text-xs text-brand-muted">
-                    {form.garageImageUrl}
+                    {pendingGarageImage?.file.name || "Saved garage image"}
                   </span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={() => {
-                      setField("garageImageUrl", "")
-                      setField("garageImageKey", "")
-                    }}
+                    onClick={removeGarageImage}
                     aria-label="Remove garage image"
                   >
                     <Trash2 className="size-4" />
@@ -1069,8 +1144,13 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 setField("pincode", normalizeNumberText(event.target.value, MAX_PINCODE_LENGTH))
               }
               maxLength={MAX_PINCODE_LENGTH}
+              placeholder={`Up to ${MAX_PINCODE_LENGTH} digits`}
+              title={`Enter up to ${MAX_PINCODE_LENGTH} digits`}
               className="h-11 border-border bg-brand-surface"
             />
+            <p className="text-xs text-brand-muted">
+              Numbers only, maximum {MAX_PINCODE_LENGTH} digits.
+            </p>
           </div>
 
           <div className="space-y-2 md:col-span-2">
@@ -1146,7 +1226,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 multiple
-                onChange={(event) => uploadImages(event.target.files, "galleryImages")}
+                onChange={(event) => {
+                  uploadImages(event.target.files, "galleryImages")
+                  event.currentTarget.value = ""
+                }}
                 className="sr-only"
               />
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1155,7 +1238,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                     Workshop gallery
                   </p>
                   <p className="text-xs text-brand-muted">
-                    Select up to {MAX_GALLERY_UPLOADS} images at once. Save settings after upload.
+                    Select up to {MAX_GALLERY_UPLOADS} images at once. Save settings to upload.
                   </p>
                 </div>
                 <Button asChild type="button" variant="outline" className="gap-2">
@@ -1167,7 +1250,11 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               </div>
             </div>
             {isUploadingGallery ? (
-              <p className="text-sm text-brand-muted">Uploading...</p>
+              <p className="text-sm text-brand-muted">Uploading on save...</p>
+            ) : pendingGalleryImages.length ? (
+              <p className="text-sm text-brand-muted">
+                {pendingGalleryImages.length} gallery image{pendingGalleryImages.length === 1 ? "" : "s"} selected. Save settings to upload.
+              </p>
             ) : null}
             {form.galleryImageUrls.length ? (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -1183,7 +1270,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                     />
                     <div className="flex items-center justify-between gap-3 p-2">
                       <span className="min-w-0 flex-1 truncate text-xs text-brand-muted">
-                        {url}
+                        {`Saved gallery image ${index + 1}`}
                       </span>
                       <Button
                         type="button"
@@ -1191,6 +1278,36 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                         size="icon"
                         onClick={() => removeGalleryImage(index)}
                         aria-label="Remove gallery image"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {pendingGalleryImages.length ? (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {pendingGalleryImages.map((image, index) => (
+                  <div
+                    key={image.previewUrl}
+                    className="overflow-hidden rounded-lg border border-border bg-brand-surface shadow-sm"
+                  >
+                    <div
+                      className="aspect-video bg-cover bg-center"
+                      style={{ backgroundImage: `url("${image.previewUrl}")` }}
+                      aria-label={`Pending gallery image ${index + 1} preview`}
+                    />
+                    <div className="flex items-center justify-between gap-3 p-2">
+                      <span className="min-w-0 flex-1 truncate text-xs text-brand-muted">
+                        {image.file.name}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removePendingGalleryImage(index)}
+                        aria-label="Remove pending gallery image"
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -1208,7 +1325,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               className="gap-2 bg-primary text-primary-foreground hover:bg-brand-primary-hover"
             >
               <Save className="size-4" />
-              {isSaving ? "Saving..." : "Save Settings"}
+              {isSaving ? (hasPendingImages ? "Uploading..." : "Saving...") : "Save Settings"}
             </Button>
           </div>
         </CardContent>
