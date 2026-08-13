@@ -13,7 +13,7 @@ type FeatureArea = "add-ons" | "integrations" | "support"
 type LimitAddOn = { key: string; metric: string; label: string; currentLimit: number | null; currentUsage: number; suggestedLimit: number }
 
 export type BusinessAccess = {
-  businessAccount: { id: string; type: string; name: string; plan: { name: string; supportTier?: string }; limits?: Record<string, number | null>; usage?: Record<string, number | undefined> }
+  businessAccount: { id: string; type: string; name: string; plan: { name: string; code?: string; supportTier?: string }; limits?: Record<string, number | null>; usage?: Record<string, number | undefined> }
   enabledFeatures?: string[]
   requestableFeatures?: Array<{ key: string; label: string }>
   limitAddOns?: LimitAddOn[]
@@ -29,10 +29,8 @@ const commonAddOnFeatureKeys = new Set([
   "integrations.manage",
   "api.standard",
   "api.enterprise",
-  "approval-workflows.manage",
   "staff.manage",
   "roles.manage",
-  "permissions.manage",
   "reports.dashboard",
   "reports.usage",
   "reports.activity",
@@ -58,7 +56,6 @@ const integrationFeatures = [
   { key: "integrations.manage", label: "External system connections" },
   { key: "api.standard", label: "Standard API access" },
   { key: "api.enterprise", label: "Enterprise API access" },
-  { key: "approval-workflows.manage", label: "Approval workflow automation" },
 ]
 
 const defaultSupport: SupportContent = { supportTier: "Basic", supportSummary: "Basic: Help videos + FAQ + standard support request", ticketCategories: [], videos: [], faqs: [] }

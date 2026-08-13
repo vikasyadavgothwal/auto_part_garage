@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { Copy, KeyRound, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -27,6 +28,8 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
   const [revokeKey, setRevokeKey] = useState<ApiKeyRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [requestingEnterprise, setRequestingEnterprise] = useState(false)
+  const [enterpriseRequested, setEnterpriseRequested] = useState(false)
   const [notice, setNotice] = useState("")
   const scopeOptions = apiAccess?.availableScopes ?? []
 
@@ -45,6 +48,12 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
         if (!response.ok || payload?.ok === false) setNotice(payload?.message ?? "Unable to load API keys")
       })
       .finally(() => { if (!cancelled) setLoading(false) })
+    void fetch(appPath(`/api/business/add-ons?businessAccountId=${encodeURIComponent(accountId)}`), { credentials: "include" })
+      .then((response) => response.json())
+      .then((payload) => {
+        if (!cancelled) setEnterpriseRequested((payload.addOnRequests ?? []).some((item: { featureKey: string; status: string }) => item.featureKey === "api.enterprise" && (item.status === "Requested" || item.status === "Approved")))
+      })
+      .catch(() => undefined)
     return () => { cancelled = true }
   }, [accountId])
 
@@ -87,6 +96,36 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
   const toggleScope = (key: string, checked: boolean | "indeterminate") =>
     setScopes((current) => checked === true ? Array.from(new Set([...current, key])) : current.filter((scope) => scope !== key))
 
+  async function copyApiKey() {
+    try {
+      await navigator.clipboard.writeText(secret)
+      toast.success("API key copied successfully")
+    } catch {
+      toast.error("Unable to copy API key")
+    }
+  }
+
+  async function requestEnterpriseApi() {
+    if (!accountId) return
+    setRequestingEnterprise(true)
+    try {
+      const response = await fetch(appPath("/api/business/add-ons/request"), {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ businessAccountId: accountId, featureKey: "api.enterprise" }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || payload?.ok === false) throw new Error(payload?.message ?? "Unable to request Enterprise API access")
+      setEnterpriseRequested(true)
+      toast.success("Enterprise API access request sent to Admin")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to request Enterprise API access")
+    } finally {
+      setRequestingEnterprise(false)
+    }
+  }
+
   if (!access) return <Card><CardContent className="p-6 text-sm text-muted-foreground">Business account access is unavailable.</CardContent></Card>
 
   return (
@@ -109,6 +148,8 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
       </Card>
 
       {notice ? <Card className="border-amber-500/30 bg-amber-500/10"><CardContent className="p-4 text-sm text-amber-700">{notice}</CardContent></Card> : null}
+
+      {apiAccess?.allowed && apiAccess.apiTier === "standard" ? <Card className="border-primary/30 bg-primary/5"><CardContent className="flex flex-wrap items-center justify-between gap-4 p-4"><div><p className="font-medium">Need higher API capacity?</p><p className="mt-1 text-sm text-muted-foreground">Request Enterprise API access to increase each API key from 120 to 600 requests per minute.</p></div><Button type="button" disabled={requestingEnterprise || enterpriseRequested} onClick={() => void requestEnterpriseApi()}>{requestingEnterprise ? "Requesting..." : enterpriseRequested ? "Request sent" : "Request Enterprise API access"}</Button></CardContent></Card> : null}
 
 
       <Card>
@@ -153,7 +194,7 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
         <DialogContent className="max-w-2xl">
           <DialogHeader><DialogTitle>Copy your API key now</DialogTitle><DialogDescription>This key will not be shown again. Save it in your backend/server environment.</DialogDescription></DialogHeader>
           <div className="break-all rounded-lg border border-border bg-muted p-4 font-mono text-sm">{secret}</div>
-          <DialogFooter><Button type="button" onClick={() => void navigator.clipboard?.writeText(secret)}><Copy className="mr-2 h-4 w-4" />Copy key</Button></DialogFooter>
+          <DialogFooter><Button type="button" onClick={() => void copyApiKey()}><Copy className="mr-2 h-4 w-4" />Copy key</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
