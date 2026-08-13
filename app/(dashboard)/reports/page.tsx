@@ -9,7 +9,6 @@ import { requestBackend } from "@/lib/auth/backend"
 
 export const dynamic = "force-dynamic"
 
-type PlanTier = "Free" | "Pro" | "Enterprise"
 type BusinessAccessPayload = {
   ok: boolean
   access?: Array<{
@@ -21,15 +20,12 @@ type BusinessAccessPayload = {
 async function getGarageReportAccess() {
   const response = await requestBackend("/api/v1/business/access", { cookieHeader: (await cookies()).toString() }).catch(() => null)
   if (!response?.ok) {
-    return { planName: null, planTier: "Free" as PlanTier, dashboard: { allowed: false, reason: "Unable to read report access." }, usage: { allowed: false, reason: "Unable to read report access." }, activity: { allowed: false, reason: "Unable to read report access." } }
+    return { planName: null, dashboard: { allowed: false, reason: "Unable to read report access." }, usage: { allowed: false, reason: "Unable to read report access." }, activity: { allowed: false, reason: "Unable to read report access." } }
   }
   const payload = (await response.json()) as BusinessAccessPayload
   const access = payload.access?.find((item) => item.businessAccount.type === "Garage")
-  const code = access?.businessAccount.plan?.code
-  const planTier: PlanTier = code === "Enterprise" ? "Enterprise" : code === "Pro" ? "Pro" : "Free"
   return {
     planName: access?.businessAccount.plan?.name ?? null,
-    planTier,
     dashboard: access?.actions?.["reports.view"] ?? { allowed: false, reason: "Reports are not enabled." },
     usage: access?.actions?.["reports.usage"] ?? { allowed: false, reason: "Usage reports are not enabled." },
     activity: access?.actions?.["reports.activity"] ?? { allowed: false, reason: "Activity reports are not enabled." },
@@ -82,7 +78,7 @@ export default async function GarageReportsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Reports</h1>
-        <p className="mt-1 text-sm text-muted-foreground">View sales, revenue, service performance, and dashboard reports. Pro includes charts; Enterprise unlocks deeper analytics dashboards.</p>
+        <p className="mt-1 text-sm text-muted-foreground">View sales, revenue, service performance, and dashboard reports. Usage reports unlock charts; activity reports unlock deeper analytics dashboards.</p>
         {access.planName ? <p className="mt-2 text-xs text-muted-foreground">Current plan: {access.planName}</p> : null}
       </div>
 
@@ -96,7 +92,7 @@ export default async function GarageReportsPage() {
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Active services</CardTitle><Wrench className="size-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{activeServices.length}</div><p className="text-xs text-muted-foreground">Services available to customers</p></CardContent></Card>
             <Card><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Service demand</CardTitle><BarChart3 className="size-4 text-muted-foreground" /></CardHeader><CardContent><div className="text-2xl font-bold">{serviceBookings}</div><p className="text-xs text-muted-foreground">Total bookings across services</p></CardContent></Card>
           </div>
-          <ReportsDashboard planTier={access.planTier} usage={access.usage} activity={access.activity} monthlyRevenue={monthlyRevenue} serviceDemand={serviceDemand} statusMix={statusMix} dailyLoad={dailyLoad} kpis={{ avgTicket: money(avgTicket), completionRate: `${completionRate}%`, activeServices: activeServices.length }} />
+          <ReportsDashboard usage={access.usage} activity={access.activity} monthlyRevenue={monthlyRevenue} serviceDemand={serviceDemand} statusMix={statusMix} dailyLoad={dailyLoad} kpis={{ avgTicket: money(avgTicket), completionRate: `${completionRate}%`, activeServices: activeServices.length }} />
         </>
       )}
     </div>

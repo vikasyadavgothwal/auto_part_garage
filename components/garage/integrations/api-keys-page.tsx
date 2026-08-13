@@ -51,7 +51,7 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
     void fetch(appPath(`/api/business/add-ons?businessAccountId=${encodeURIComponent(accountId)}`), { credentials: "include" })
       .then((response) => response.json())
       .then((payload) => {
-        if (!cancelled) setEnterpriseRequested((payload.addOnRequests ?? []).some((item: { featureKey: string; status: string }) => item.featureKey === "api.enterprise" && (item.status === "Requested" || item.status === "Approved")))
+        if (!cancelled) setEnterpriseRequested((payload.addOnRequests ?? []).some((item: { featureKey: string; status: string }) => item.featureKey === "api.enterprise" && (item.status === "Requested" || item.status === "Approved" || item.status === "Enabled")))
       })
       .catch(() => undefined)
     return () => { cancelled = true }

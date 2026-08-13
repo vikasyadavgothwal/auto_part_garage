@@ -10,20 +10,47 @@ import { Input } from "@/components/ui/input"
 import { appPath, appRoutes } from "@/lib/routes"
 
 type FeatureArea = "add-ons" | "integrations" | "support"
-type LimitAddOn = { key: string; metric: string; label: string; currentLimit: number | null; currentUsage: number; suggestedLimit: number }
+type PriceFields = { pricingModel?: string; priceAmount?: number; priceCurrency?: string; unitPriceAmount?: number; validityDays?: number }
+type LimitAddOn = PriceFields & { key: string; metric: string; label: string; currentLimit: number | null; currentUsage: number; suggestedExtraUnits?: number; suggestedLimit: number }
 
 export type BusinessAccess = {
   businessAccount: { id: string; type: string; name: string; plan: { name: string; code?: string; supportTier?: string }; limits?: Record<string, number | null>; usage?: Record<string, number | undefined> }
   enabledFeatures?: string[]
-  requestableFeatures?: Array<{ key: string; label: string }>
+  requestableFeatures?: Array<PriceFields & { key: string; label: string }>
   limitAddOns?: LimitAddOn[]
   actions?: Record<string, { allowed: boolean; reason?: string | null }>
 }
 
-type AddOnRequest = { id: string; featureKey: string; label: string; status: string }
+type AddOnRequest = PriceFields & { id: string; featureKey: string; label: string; status: string; priceQuantity?: number; validFrom?: string | null; validUntil?: string | null; renewalAt?: string | null }
 export type SupportContent = { supportTier: string; supportSummary: string; ticketCategories: Array<{ value: string; label: string }>; videos: Array<{ id: string; title: string; description?: string | null; videoUrl: string; supportTier: string }>; faqs: Array<{ id: string; question: string; answer: string; supportTier: string }> }
 type SupportVideo = SupportContent["videos"][number]
-const limitFeatureKey = (metric: string, target: number) => `limit.${metric}.${target}`
+const limitFeatureKey = (metric: string, extraUnits: number) => `limit.${metric}.${extraUnits}`
+const formatMoney = (amount = 0, currency = "AED") => `${currency} ${(amount / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const dateFormatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC", year: "numeric" })
+const formatValidity = (days?: number) => days ? `${days} day${days === 1 ? "" : "s"}` : "Validity not set"
+const formatValidUntil = (value?: string | null) => value ? `Valid till ${dateFormatter.format(new Date(value))}` : "Validity not set"
+const limitExtraUnits = (extraUnits: number) => Number.isInteger(extraUnits) ? Math.max(0, extraUnits) : 0
+const limitExtraUnitText = (quantity: number) => `${quantity} extra unit${quantity === 1 ? "" : "s"}`
+const limitPriceText = (item: LimitAddOn, extraUnits: number) => {
+  const unitAmount = item.unitPriceAmount ?? 0
+  const quantity = limitExtraUnits(extraUnits)
+  return `${formatMoney(unitAmount * quantity, item.priceCurrency)} for ${limitExtraUnitText(quantity)} (${formatMoney(unitAmount, item.priceCurrency)} per extra unit)`
+}
+const activeAddOnStatuses = new Set(["Approved", "Enabled"])
+const isAddOnCurrentlyActive = (request?: Pick<AddOnRequest, "status" | "validFrom" | "validUntil"> | null) => {
+  if (!request || !activeAddOnStatuses.has(request.status)) return false
+  const now = Date.now()
+  if (request.validFrom && new Date(request.validFrom).getTime() > now) return false
+  return !request.validUntil || new Date(request.validUntil).getTime() > now
+}
+const addOnStatusLabel = (request?: Pick<AddOnRequest, "status" | "validFrom" | "validUntil"> | null) =>
+  isAddOnCurrentlyActive(request) ? "Already added" : request?.status === "Requested" ? "Request sent" : request?.status === "Rejected" ? "Rejected" : request?.status && activeAddOnStatuses.has(request.status) ? "Expired" : request?.status ?? "Available"
+const addOnStatusClass = (request: Pick<AddOnRequest, "status" | "validFrom" | "validUntil">) =>
+  isAddOnCurrentlyActive(request)
+    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+    : request.status === "Rejected"
+      ? "border-red-500/30 bg-red-500/10 text-red-600"
+      : "border-amber-500/30 bg-amber-500/10 text-amber-600"
 
 const commonAddOnFeatureKeys = new Set([
   "integrations.manage",
@@ -37,7 +64,7 @@ const commonAddOnFeatureKeys = new Set([
   "support.priority",
 ])
 const commonAddOnMetrics = new Set(["staff", "roles", "permissions", "integrations"])
-const addOnSections = (accountType: string, limits: LimitAddOn[], features: Array<{ key: string; label: string }>) => [
+const addOnSections = (accountType: string, limits: LimitAddOn[], features: Array<PriceFields & { key: string; label: string }>) => [
   {
     title: "Common add-ons",
     description: "Shared limits and platform features used across Garage, Fleet, and Supplier accounts.",
@@ -133,21 +160,23 @@ export function GarageFeatureAccessPage({
   }, [accountId, area])
 
   if (area === "add-ons") return <main className="space-y-6">
-    <Card><CardHeader><p className="text-sm text-muted-foreground">Current plan: {access?.businessAccount.plan.name ?? "Unavailable"}</p><CardTitle>Paid Add-ons</CardTitle><CardDescription>Request a feature that is not included in your plan. Admin will confirm payment and enable it for your account.</CardDescription></CardHeader></Card>
-    {addOns.some((item) => item.status === "Enabled") ? <Card><CardHeader><CardTitle className="text-base">Enabled add-ons</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{addOns.filter((item) => item.status === "Enabled").map((item) => <span key={item.id} className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-600">{item.label}</span>)}</CardContent></Card> : null}
-    {addOnGroups.map((section) => <section key={section.title} className="space-y-3"><div><h2 className="text-base font-semibold text-foreground">{section.title}</h2><p className="text-sm text-muted-foreground">{section.description}</p></div>{section.limits.length ? <div className="grid gap-4 md:grid-cols-2">{section.limits.map((item) => { const rawTarget = limitTargets[item.metric] ?? String(item.suggestedLimit); const target = Number(rawTarget); const featureKey = Number.isInteger(target) ? limitFeatureKey(item.metric, target) : item.key; const request = addOns.find((row) => row.featureKey === featureKey); const waiting = request?.status === "Requested" || request?.status === "Approved"; const currentLimit = item.currentLimit ?? 0; const invalid = !Number.isInteger(target) || target <= currentLimit; return <Card key={item.metric}><CardHeader><CardTitle className="text-base">{item.label}</CardTitle><CardDescription>Current usage: {item.currentUsage}/{item.currentLimit ?? "Unlimited"}. Request the total limit you need for this account.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-[1fr_auto]"><input type="number" min={currentLimit + 1} className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary" value={rawTarget} onChange={(event) => setLimitTargets((targets) => ({ ...targets, [item.metric]: event.target.value }))} /><Button disabled={pendingKey === featureKey || waiting || invalid} onClick={() => requestAddOn(featureKey, `Requested total limit: ${target}`)}>{pendingKey === featureKey ? "Requesting..." : waiting ? "Request sent" : "Request limit"}</Button><p className="text-xs text-muted-foreground sm:col-span-2">{request?.status ?? "Available as paid add-on"}</p></CardContent></Card> })}</div> : null}{section.features.length ? <div className="grid gap-4 md:grid-cols-2">{section.features.map((feature) => { const request = addOns.find((item) => item.featureKey === feature.key); const waiting = request?.status === "Requested" || request?.status === "Approved"; return <Card key={feature.key}><CardHeader><CardTitle className="text-base">{feature.label}</CardTitle><CardDescription>Available as a paid add-on without changing your current plan.</CardDescription></CardHeader><CardContent className="flex items-center justify-between gap-3"><span className="text-sm text-muted-foreground">{request?.status ?? "Available"}</span><Button disabled={pendingKey === feature.key || waiting} onClick={() => requestAddOn(feature.key)}>{pendingKey === feature.key ? "Requesting..." : waiting ? "Request sent" : "Request Add-on"}</Button></CardContent></Card> })}</div> : null}</section>)}
+    <Card><CardHeader><p className="text-sm text-muted-foreground">Current plan: {access?.businessAccount.plan.name ?? "Unavailable"}</p><CardTitle>Paid Add-ons</CardTitle><CardDescription>Add a feature that is not included in your plan. Confirm once and it will be enabled for your account.</CardDescription></CardHeader></Card>
+    {addOns.length ? <Card><CardHeader><CardTitle className="text-base">Your add-ons</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{addOns.map((item) => <span key={item.id} className={`rounded-full border px-3 py-1 text-sm ${addOnStatusClass(item)}`}>{item.label}: {addOnStatusLabel(item)} · {formatValidUntil(item.validUntil)}</span>)}</CardContent></Card> : null}
+    {addOnGroups.map((section) => <section key={section.title} className="space-y-3"><div><h2 className="text-base font-semibold text-foreground">{section.title}</h2><p className="text-sm text-muted-foreground">{section.description}</p></div>{section.limits.length ? <div className="grid gap-4 md:grid-cols-2">{section.limits.map((item) => { const rawExtraUnits = limitTargets[item.metric] ?? String(item.suggestedExtraUnits ?? 5); const extraUnits = Number(rawExtraUnits); const featureKey = Number.isInteger(extraUnits) ? limitFeatureKey(item.metric, extraUnits) : item.key; const request = addOns.find((row) => row.featureKey === featureKey); const active = isAddOnCurrentlyActive(request); const waiting = request?.status === "Requested"; const currentLimit = item.currentLimit ?? 0; const addedCapacity = limitExtraUnits(extraUnits); const newTotalLimit = currentLimit + addedCapacity; const invalid = !Number.isInteger(extraUnits) || extraUnits < 1; return <Card key={item.metric}><CardHeader><CardTitle className="text-base">{item.label}</CardTitle><CardDescription>Enter how many extra units you want to add to your current limit.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-[1fr_auto]"><input type="number" min={1} className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary" value={rawExtraUnits} onChange={(event) => setLimitTargets((targets) => ({ ...targets, [item.metric]: event.target.value }))} /><Button disabled={pendingKey === featureKey || active || waiting || invalid} onClick={() => requestAddOn(featureKey, `Add ${addedCapacity} extra units. New total limit after add-on: ${newTotalLimit}.`)}>{pendingKey === featureKey ? "Adding..." : active ? "Already added" : waiting ? "Request sent" : request?.status === "Rejected" ? "Add again" : "Add extra limit"}</Button><div className="text-xs text-muted-foreground sm:col-span-2"><p>{addOnStatusLabel(request)}{request ? ` · ${formatValidUntil(request.validUntil)}` : ""}</p><p>Current total limit: {item.currentLimit ?? "Unlimited"} · Current usage: {item.currentUsage}</p><p>New total limit after add-on: {Number.isInteger(extraUnits) ? newTotalLimit : "Enter a valid number"} · Added capacity: {limitExtraUnitText(addedCapacity)}</p><p>Estimated price: {limitPriceText(item, addedCapacity)}</p><p>Validity: {formatValidity(item.validityDays)}</p></div></CardContent></Card> })}</div> : null}{section.features.length ? <div className="grid gap-4 md:grid-cols-2">{section.features.map((feature) => { const request = addOns.find((item) => item.featureKey === feature.key); const active = isAddOnCurrentlyActive(request); const waiting = request?.status === "Requested"; return <Card key={feature.key}><CardHeader><CardTitle className="text-base">{feature.label}</CardTitle><CardDescription>Available as an add-on without changing your current plan.</CardDescription></CardHeader><CardContent className="flex items-center justify-between gap-3"><div><span className="text-sm text-muted-foreground">{addOnStatusLabel(request)}{request ? ` · ${formatValidUntil(request.validUntil)}` : ""}</span><p className="text-xs text-muted-foreground">Price: {formatMoney(feature.priceAmount, feature.priceCurrency)}</p><p className="text-xs text-muted-foreground">Validity: {formatValidity(feature.validityDays)}</p></div><Button disabled={pendingKey === feature.key || active || waiting} onClick={() => requestAddOn(feature.key)}>{pendingKey === feature.key ? "Adding..." : active ? "Already added" : waiting ? "Request sent" : request?.status === "Rejected" ? "Add again" : "Add Add-on"}</Button></CardContent></Card> })}</div> : null}</section>)}
     {!addOnGroups.length ? <Card><CardContent className="pt-6 text-sm text-muted-foreground">No additional paid features are available for this account.</CardContent></Card> : null}
   </main>
 
   async function requestAddOn(featureKey: string, note?: string) {
     if (!accountId) return
+    const confirmMessage = note ? `Are you sure you want to add this add-on? It will be enabled for your account now.\n\n${note}` : "Are you sure you want to add this add-on? It will be enabled for your account now."
+    if (!window.confirm(confirmMessage)) return
     setPendingKey(featureKey)
     try {
       const response = await fetch(appPath("/api/business/add-ons/request"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessAccountId: accountId, featureKey, note }) })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || payload?.ok === false) throw new Error(payload?.message ?? "Unable to request add-on")
       setAddOns((items) => [payload.addOnRequest, ...items.filter((item) => item.featureKey !== featureKey)])
-      toast.success("Add-on request sent to Admin.")
+      toast.success("Add-on enabled.")
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to request add-on") } finally { setPendingKey(null) }
   }
 
@@ -163,7 +192,7 @@ export function GarageFeatureAccessPage({
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to create support ticket") } finally { setIsCreatingTicket(false) }
   }
 
-  if (area === "integrations") return <main className="space-y-6"><section className="rounded-lg border border-[#1f2937] bg-[#111827] p-5 text-white"><p className="text-sm text-[#9CA3AF]">Current plan: {access?.businessAccount.plan.name ?? "Unavailable"}</p><h1 className="mt-2 text-2xl font-semibold">Integrations</h1><p className="mt-2 max-w-3xl text-sm text-[#9CA3AF]">Connect tools allowed by the current plan.</p><p className="mt-3 text-sm text-[#9CA3AF]">Usage: {access?.businessAccount.usage?.integrations ?? 0}/{access?.businessAccount.limits?.integrations ?? "Unlimited"} integrations</p></section><section className="grid gap-4 md:grid-cols-2">{integrationFeatures.map((feature) => { const isEnabled = enabled.has(feature.key); const canRequest = requestable.has(feature.key); return <article key={feature.key} className="rounded-lg border border-[#1f2937] bg-[#111827] p-4 text-white"><div className="flex items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{feature.label}</h2><p className="mt-1 text-xs text-[#9CA3AF]">{isEnabled ? "Included in this plan" : "Not included in this plan"}</p></div><span className={`rounded-full px-3 py-1 text-xs ${isEnabled ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>{isEnabled ? "Included" : canRequest ? "Add-on" : "Locked"}</span></div>{!isEnabled && canRequest ? <button type="button" disabled={pendingKey === feature.key} onClick={() => requestAddOn(feature.key)} className="mt-4 rounded-md bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-60">{pendingKey === feature.key ? "Requesting..." : "Request Add-on"}</button> : null}</article> })}</section><section className="rounded-lg border border-[#1f2937] bg-[#111827] p-4 text-sm text-[#9CA3AF]">{integrationAction?.allowed === false ? integrationAction.reason ?? "Some actions are blocked by the current plan." : "Backend entitlements are active for this account."}<a href={appRoutes.plans} className="ml-2 text-primary underline">View plans</a></section></main>
+  if (area === "integrations") return <main className="space-y-6"><section className="rounded-lg border border-[#1f2937] bg-[#111827] p-5 text-white"><p className="text-sm text-[#9CA3AF]">Current plan: {access?.businessAccount.plan.name ?? "Unavailable"}</p><h1 className="mt-2 text-2xl font-semibold">Integrations</h1><p className="mt-2 max-w-3xl text-sm text-[#9CA3AF]">Connect tools allowed by the current plan.</p><p className="mt-3 text-sm text-[#9CA3AF]">Usage: {access?.businessAccount.usage?.integrations ?? 0}/{access?.businessAccount.limits?.integrations ?? "Unlimited"} integrations</p></section><section className="grid gap-4 md:grid-cols-2">{integrationFeatures.map((feature) => { const isEnabled = enabled.has(feature.key); const canRequest = requestable.has(feature.key); return <article key={feature.key} className="rounded-lg border border-[#1f2937] bg-[#111827] p-4 text-white"><div className="flex items-start justify-between gap-3"><div><h2 className="text-base font-semibold">{feature.label}</h2><p className="mt-1 text-xs text-[#9CA3AF]">{isEnabled ? "Included in this plan" : "Not included in this plan"}</p></div><span className={`rounded-full px-3 py-1 text-xs ${isEnabled ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}>{isEnabled ? "Included" : canRequest ? "Add-on" : "Locked"}</span></div>{!isEnabled && canRequest ? <button type="button" disabled={pendingKey === feature.key} onClick={() => requestAddOn(feature.key)} className="mt-4 rounded-md bg-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-60">{pendingKey === feature.key ? "Adding..." : "Add Add-on"}</button> : null}</article> })}</section><section className="rounded-lg border border-[#1f2937] bg-[#111827] p-4 text-sm text-[#9CA3AF]">{integrationAction?.allowed === false ? integrationAction.reason ?? "Some actions are blocked by the current plan." : "Backend entitlements are active for this account."}<a href={appRoutes.plans} className="ml-2 text-primary underline">View plans</a></section></main>
 
   return <main className="space-y-6">
     <section className="rounded-xl border border-border bg-card p-6 shadow-sm">

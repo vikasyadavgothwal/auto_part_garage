@@ -41,6 +41,7 @@ type ServicesManagerProps = {
 type ServiceMutationPayload = {
   ok: boolean
   service?: GarageServiceRecord
+  services?: GarageServiceRecord[]
   id?: string
   message?: string
 }
@@ -105,6 +106,9 @@ export function ServicesManager({
     () => services.filter((service) => service.isPlanSuspended),
     [services],
   )
+  const planSuspensionReason =
+    planSuspendedServices.find((service) => service.planSuspensionReason)?.planSuspensionReason ??
+    "Your current plan/add-ons limit the number of active services. Extra services are safely preserved but hidden from customer booking until your limit increases."
 
   const openCreateDialog = () => {
     setEditingService(null)
@@ -180,11 +184,13 @@ export function ServicesManager({
 
       const formatted = formatGarageService(payload.service)
       setServices((current) =>
-        editingService
-          ? current.map((service) =>
-              service.databaseId === formatted.databaseId ? formatted : service,
-            )
-          : [formatted, ...current],
+        payload.services
+          ? payload.services.map(formatGarageService)
+          : editingService
+            ? current.map((service) =>
+                service.databaseId === formatted.databaseId ? formatted : service,
+              )
+            : [formatted, ...current],
       )
       setIsDialogOpen(false)
       setEditingService(null)
@@ -219,7 +225,9 @@ export function ServicesManager({
         throw new Error(payload.message || "Unable to delete service")
       }
       setServices((current) =>
-        current.filter((item) => item.databaseId !== pendingDeleteService.databaseId),
+        payload.services
+          ? payload.services.map(formatGarageService)
+          : current.filter((item) => item.databaseId !== pendingDeleteService.databaseId),
       )
       setPendingDeleteService(null)
       toast.success("Service deleted successfully")
@@ -271,9 +279,7 @@ export function ServicesManager({
       {planSuspendedServices.length ? (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
           <p className="font-semibold text-amber-200">Some services are temporarily inactive due to your current plan.</p>
-          <p className="mt-1 text-amber-100/90">
-            Your Free plan allows limited active services. Extra services are safely preserved but hidden from customer booking until your plan is upgraded or admin increases your limit.
-          </p>
+          <p className="mt-1 text-amber-100/90">{planSuspensionReason}</p>
           <p className="mt-2 text-xs text-amber-100/80">
             Suspended services: {planSuspendedServices.map((service) => service.name).join(", ")}
           </p>
