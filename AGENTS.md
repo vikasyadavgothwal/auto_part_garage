@@ -35,6 +35,7 @@ Garage partner dashboard for bookings, services, schedule, reviews, settings, an
 - Do not change API contracts, Prisma schema, auth cookies/JWTs, Firebase config, route base paths, or shared env behavior without listing affected apps first.
 - Do not mix public website, admin, user, supplier, garage, and fleet business logic unless existing imports or APIs already connect them.
 - Preserve existing Next.js version guidance and local architecture rules.
+- Validate every new or changed user-editable input, textarea, select, file upload, and custom input before submission/API calls; trim whitespace, prevent clearly invalid values where practical, show required fields with a red `*`, and use the existing toast/notification system for success and error feedback.
 
 ### What Not to Touch Unless Explicitly Required
 
