@@ -12,6 +12,7 @@ import {
 } from "@/lib/garage-bookings.server"
 import { getGarageServices } from "@/lib/garage-services.server"
 import { requestBackend } from "@/lib/auth/backend"
+import { getGarageSettings } from "@/lib/garage-settings.server"
 import { appRoutes } from "@/lib/routes"
 
 export const dynamic = "force-dynamic"
@@ -61,7 +62,8 @@ export default async function GarageSchedulePage({
     getGarageServices(),
     getGarageAction("appointments.create"),
   ])
-  const schedulePageData = buildSchedulePageData(bookings, weekOffset)
+  const profile = await getGarageSettings()
+  const schedulePageData = buildSchedulePageData(bookings, weekOffset, profile)
 
   return (
     <div className="min-w-0 space-y-8">
@@ -85,6 +87,7 @@ export default async function GarageSchedulePage({
         days={schedulePageData.days}
         timeSlots={schedulePageData.timeSlots}
         appointments={schedulePageData.appointments}
+        dayAvailability={schedulePageData.dayAvailability}
       />
       <ScheduleLegendCard />
 

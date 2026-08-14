@@ -29,6 +29,10 @@ export function ScheduleLegendCard() {
               Operating Hours: 8 AM - 6 PM
             </span>
           </div>
+          <div className="flex items-center gap-3">
+            <span className="h-4 w-4 rounded border border-destructive/40 bg-destructive/10" />
+            <span className="text-sm text-brand-muted">Closed Day</span>
+          </div>
         </div>
       </CardContent>
     </Card>

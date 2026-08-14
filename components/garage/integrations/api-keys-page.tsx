@@ -60,13 +60,18 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
   async function createKey(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!accountId || !apiAccess?.allowed) return
+    const normalizedName = name.trim()
+    if (normalizedName.length < 2 || normalizedName.length > 100) {
+      toast.error("API key name must be between 2 and 100 characters")
+      return
+    }
     setSaving(true)
     setNotice("")
     const response = await fetch(appPath("/api/business/api-keys"), {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ businessAccountId: accountId, name, scopes }),
+      body: JSON.stringify({ businessAccountId: accountId, name: normalizedName, scopes }),
     })
     const payload = await response.json().catch(() => ({}))
     setSaving(false)
@@ -74,9 +79,10 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
       setNotice(payload?.message ?? "Unable to create API key")
       return
     }
-    setSecret(payload.apiKey)
-    setKeys((current) => [payload.key, ...current])
-    setName("My website backend")
+      setSecret(payload.apiKey)
+      setKeys((current) => [payload.key, ...current])
+      setName("My website backend")
+      toast.success("API key created successfully")
   }
 
   async function revokeSelectedKey() {
@@ -160,8 +166,8 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
         <CardContent>
           <form onSubmit={createKey} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="api-key-name">Key name</Label>
-              <Input id="api-key-name" value={name} onChange={(event) => setName(event.target.value)} disabled={!apiAccess?.allowed || saving} />
+              <Label htmlFor="api-key-name">Key name <span className="text-destructive">*</span></Label>
+              <Input id="api-key-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={100} required disabled={!apiAccess?.allowed || saving} />
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               {scopeOptions.map((scope) => (

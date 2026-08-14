@@ -6,12 +6,24 @@ import { PageHeading } from "@/components/garage/shared/page-heading"
 import {
   buildReviewsPageData,
   getGarageReviews,
+  getGarageReviewsPage,
 } from "@/lib/garage-reviews.server"
+import { pageFromSearchParams, type PageSearchParams } from "@/lib/pagination"
 
 export const dynamic = "force-dynamic"
 
-export default async function GarageReviewsPage() {
-  const reviewsPageData = buildReviewsPageData(await getGarageReviews())
+export default async function GarageReviewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<PageSearchParams>
+}) {
+  const page = pageFromSearchParams(await searchParams)
+  const [allReviews, tablePage] = await Promise.all([
+    getGarageReviews(),
+    getGarageReviewsPage(page),
+  ])
+  const reviewsPageData = buildReviewsPageData(allReviews)
+  const tableData = buildReviewsPageData(tablePage.reviews)
 
   return (
     <div className="space-y-8">
@@ -24,7 +36,10 @@ export default async function GarageReviewsPage() {
       <RatingDistributionCard
         distribution={reviewsPageData.ratingDistribution}
       />
-      <ReviewsTable reviews={reviewsPageData.reviews} />
+      <ReviewsTable
+        reviews={tableData.reviews}
+        pagination={tablePage.pagination}
+      />
       <ReputationTipsCard tips={reviewsPageData.reputationTips} />
     </div>
   )

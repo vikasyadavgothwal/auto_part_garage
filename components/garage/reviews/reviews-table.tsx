@@ -30,21 +30,24 @@ import {
   tableHeaderRowClass,
   tableRowClass,
 } from "@/components/garage/shared/table-styles"
+import { TablePagination } from "@/components/garage/shared/table-pagination"
 import { authenticatedFetch } from "@/lib/auth/client"
 import type { ReviewsPageData } from "@/lib/garage-page-data"
+import type { PaginationMeta } from "@/lib/pagination"
 import { appPath } from "@/lib/routes"
 
 type ReviewsTableProps = {
   reviews: ReviewsPageData["reviews"]
+  pagination: PaginationMeta
 }
 
-export function ReviewsTable({ reviews }: ReviewsTableProps) {
+export function ReviewsTable({ reviews, pagination }: ReviewsTableProps) {
   const router = useRouter()
   const [selectedReview, setSelectedReview] = useState<
     ReviewsPageData["reviews"][number] | null
   >(null)
   const [reply, setReply] = useState("")
-  const [error, setError] = useState<string | null>(null)
+  const [, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function openReply(review: ReviewsPageData["reviews"][number]) {
@@ -182,6 +185,7 @@ export function ReviewsTable({ reviews }: ReviewsTableProps) {
             </TableBody>
           </Table>
         </div>
+        <TablePagination pagination={pagination} />
       </Card>
 
       <Dialog
@@ -204,18 +208,16 @@ export function ReviewsTable({ reviews }: ReviewsTableProps) {
             </div>
 
             <label className="grid gap-2 text-sm font-medium text-foreground">
-              Garage reply
+              Garage reply <span className="text-destructive">*</span>
               <textarea
                 value={reply}
                 onChange={(event) => setReply(event.target.value)}
                 className="min-h-28 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                 maxLength={1000}
+                required
               />
             </label>
 
-            {error ? (
-              <p className="text-sm font-medium text-destructive">{error}</p>
-            ) : null}
           </div>
 
           <DialogFooter>

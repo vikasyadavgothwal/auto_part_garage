@@ -183,9 +183,13 @@ export function GarageFeatureAccessPage({
   async function createTicket(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!accountId) return
+    const normalizedSubject = subject.trim()
+    const normalizedMessage = ticketMessage.trim()
+    if (normalizedSubject.length < 3 || normalizedSubject.length > 150) return toast.error("Subject must be between 3 and 150 characters")
+    if (normalizedMessage.length < 10 || normalizedMessage.length > 2000) return toast.error("Message must be between 10 and 2000 characters")
     setIsCreatingTicket(true)
     try {
-      const response = await fetch(appPath("/api/business/help-tickets"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessAccountId: accountId, subject, message: ticketMessage, category: category || undefined }) })
+      const response = await fetch(appPath("/api/business/help-tickets"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessAccountId: accountId, subject: normalizedSubject, message: normalizedMessage, category: category || undefined }) })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || payload?.ok === false) throw new Error(payload?.message ?? "Unable to create support ticket")
       setSubject(""); setTicketMessage(""); setCategory(""); setIsTicketDialogOpen(false); toast.success("Support ticket created. We will contact you shortly and help resolve your problem.")
@@ -204,7 +208,7 @@ export function GarageFeatureAccessPage({
         </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={faqQuery} onChange={(event) => setFaqQuery(event.target.value)} placeholder="Search support center" className="h-11 pl-9" />
+          <Input value={faqQuery} onChange={(event) => setFaqQuery(event.target.value.slice(0, 100))} maxLength={100} placeholder="Search support center" className="h-11 pl-9" />
         </div>
       </div>
     </section>
@@ -273,7 +277,7 @@ export function GarageFeatureAccessPage({
         <CardDescription>Open a support request if the guides and tutorials do not solve the issue.</CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={() => setIsTicketDialogOpen(true)}>Raise Ticket</Button>
+        <Button onClick={() => setIsTicketDialogOpen(true)}>Raise support ticket</Button>
       </CardContent>
     </Card>
 
@@ -301,8 +305,8 @@ export function GarageFeatureAccessPage({
         </DialogHeader>
         <form onSubmit={createTicket} className="grid gap-3">
           {support.ticketCategories.length ? <select className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary" value={category} onChange={(event) => setCategory(event.target.value)} required><option value="">Select support option</option>{support.ticketCategories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select> : null}
-          <input className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" placeholder="Subject" value={subject} onChange={(event) => setSubject(event.target.value)} required />
-          <textarea className="min-h-32 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" placeholder="Message" value={ticketMessage} onChange={(event) => setTicketMessage(event.target.value)} required />
+          <input className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" placeholder="Subject *" value={subject} onChange={(event) => setSubject(event.target.value.slice(0, 150))} minLength={3} maxLength={150} required />
+          <textarea className="min-h-32 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary" placeholder="Message *" value={ticketMessage} onChange={(event) => setTicketMessage(event.target.value.slice(0, 2000))} minLength={10} maxLength={2000} required />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setIsTicketDialogOpen(false)} disabled={isCreatingTicket}>Cancel</Button>
             <Button type="submit" disabled={isCreatingTicket}>{isCreatingTicket ? "Creating..." : "Create Ticket"}</Button>

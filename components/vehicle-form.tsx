@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -48,10 +49,30 @@ export function VehicleForm({
     key: Key,
     nextValue: VehicleFormValues[Key]
   ) {
+    if (key === "primary" || key === "status") {
+      setValues((currentValues) => ({ ...currentValues, [key]: nextValue }))
+      return
+    }
+    const sanitizedValue =
+      key === "year" || key === "mileage"
+        ? String(nextValue).replace(/\D/g, "")
+        : key === "vin"
+          ? String(nextValue).replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
+          : String(nextValue)
     setValues((currentValues) => ({
       ...currentValues,
-      [key]: nextValue,
+      [key]: sanitizedValue as VehicleFormValues[Key],
     }))
+  }
+
+  function validate() {
+    const currentYear = new Date().getFullYear() + 1
+    if (!/^\d{4}$/.test(values.year) || Number(values.year) < 1900 || Number(values.year) > currentYear) return `Year must be between 1900 and ${currentYear}`
+    if (!values.make.trim() || values.make.trim().length > 80) return "Make is required and must be 80 characters or fewer"
+    if (!values.model.trim() || values.model.trim().length > 80) return "Model is required and must be 80 characters or fewer"
+    if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(values.vin)) return "VIN must be exactly 17 valid characters"
+    if (!/^(?:[1-9]|[1-6]\d|70)$/.test(values.mileage)) return "Mileage must be a whole number between 1 and 70"
+    return ""
   }
 
   return (
@@ -59,12 +80,14 @@ export function VehicleForm({
       className={cn("space-y-6", className)}
       onSubmit={(event) => {
         event.preventDefault()
-        onSubmit(values)
+        const error = validate()
+        if (error) return toast.error(error)
+        onSubmit({ ...values, make: values.make.trim(), model: values.model.trim() })
       }}
     >
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2">
-          <Label htmlFor="vehicle-year">Year</Label>
+          <Label htmlFor="vehicle-year">Year <span className="text-destructive">*</span></Label>
           <Input
             id="vehicle-year"
             inputMode="numeric"
@@ -78,11 +101,12 @@ export function VehicleForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="vehicle-make">Make</Label>
+          <Label htmlFor="vehicle-make">Make <span className="text-destructive">*</span></Label>
           <Input
             id="vehicle-make"
             placeholder="Toyota"
             required
+            maxLength={80}
             value={values.make}
             onChange={(event) => updateValue("make", event.target.value)}
             className="h-10 border-border bg-brand-surface"
@@ -90,11 +114,12 @@ export function VehicleForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="vehicle-model">Model</Label>
+          <Label htmlFor="vehicle-model">Model <span className="text-destructive">*</span></Label>
           <Input
             id="vehicle-model"
             placeholder="Camry"
             required
+            maxLength={80}
             value={values.model}
             onChange={(event) => updateValue("model", event.target.value)}
             className="h-10 border-border bg-brand-surface"
@@ -104,11 +129,13 @@ export function VehicleForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="vehicle-vin">VIN</Label>
+          <Label htmlFor="vehicle-vin">VIN <span className="text-destructive">*</span></Label>
           <Input
             id="vehicle-vin"
             placeholder="JT2BF22K6X0123456"
             required
+            minLength={17}
+            maxLength={17}
             value={values.vin}
             onChange={(event) => updateValue("vin", event.target.value)}
             className="h-10 border-border bg-brand-surface uppercase"
@@ -116,12 +143,15 @@ export function VehicleForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="vehicle-mileage">Mileage</Label>
+          <Label htmlFor="vehicle-mileage">Mileage <span className="text-destructive">*</span></Label>
           <Input
             id="vehicle-mileage"
             inputMode="numeric"
             placeholder="45234"
             required
+            min="1"
+            max="70"
+            maxLength={2}
             value={values.mileage}
             onChange={(event) => updateValue("mileage", event.target.value)}
             className="h-10 border-border bg-brand-surface"
