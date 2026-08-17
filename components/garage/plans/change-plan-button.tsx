@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export function ChangePlanButton({
   businessAccountId,
@@ -20,9 +22,9 @@ export function ChangePlanButton({
 }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   const changePlan = async () => {
-    if (!window.confirm(`Change plan from ${currentPlanName} to ${planName}?`)) return
     setSaving(true)
     const response = await fetch("/api/plans/change", {
       method: "PATCH",
@@ -32,15 +34,35 @@ export function ChangePlanButton({
     const result = (await response.json().catch(() => null)) as { message?: string } | null
     setSaving(false)
     if (!response.ok) {
-      window.alert(result?.message ?? "Unable to change plan.")
+      toast.error(result?.message ?? "Unable to change plan.")
       return
     }
+    setIsDialogOpen(false)
+    toast.success(`Plan changed to ${planName}.`)
     router.refresh()
   }
 
   return (
-    <Button className="mt-5 w-full" onClick={changePlan} disabled={saving}>
-      {saving ? "Updating..." : actionLabel}
-    </Button>
+    <>
+      <Button className="mt-5 w-full" onClick={() => setIsDialogOpen(true)} disabled={saving}>
+        {saving ? "Updating..." : actionLabel}
+      </Button>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change plan</DialogTitle>
+            <DialogDescription>Change plan from {currentPlanName} to {planName}.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={saving}>Cancel</Button>
+            </DialogClose>
+            <Button type="button" onClick={() => void changePlan()} disabled={saving}>
+              {saving ? "Updating..." : "Confirm change"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

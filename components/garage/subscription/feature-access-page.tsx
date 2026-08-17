@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { HelpCircle, MessageSquare, PlayCircle, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { appPath, appRoutes } from "@/lib/routes"
 
@@ -24,6 +24,7 @@ export type BusinessAccess = {
 type AddOnRequest = PriceFields & { id: string; featureKey: string; label: string; status: string; priceQuantity?: number; validFrom?: string | null; validUntil?: string | null; renewalAt?: string | null }
 export type SupportContent = { supportTier: string; supportSummary: string; ticketCategories: Array<{ value: string; label: string }>; videos: Array<{ id: string; title: string; description?: string | null; videoUrl: string; supportTier: string }>; faqs: Array<{ id: string; question: string; answer: string; supportTier: string }> }
 type SupportVideo = SupportContent["videos"][number]
+type PendingAddOnConfirmation = { featureKey: string; note?: string }
 const limitFeatureKey = (metric: string, extraUnits: number) => `limit.${metric}.${extraUnits}`
 const formatMoney = (amount = 0, currency = "AED") => `${currency} ${(amount / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC", year: "numeric" })
@@ -132,6 +133,7 @@ export function GarageFeatureAccessPage({
   const [faqQuery, setFaqQuery] = useState("")
   const [showAllVideos, setShowAllVideos] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<SupportVideo | null>(null)
+  const [pendingAddOnConfirmation, setPendingAddOnConfirmation] = useState<PendingAddOnConfirmation | null>(null)
   const [subject, setSubject] = useState("")
   const [ticketMessage, setTicketMessage] = useState("")
   const [category, setCategory] = useState("")
@@ -164,18 +166,39 @@ export function GarageFeatureAccessPage({
     {addOns.length ? <Card><CardHeader><CardTitle className="text-base">Your add-ons</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{addOns.map((item) => <span key={item.id} className={`rounded-full border px-3 py-1 text-sm ${addOnStatusClass(item)}`}>{item.label}: {addOnStatusLabel(item)} · {formatValidUntil(item.validUntil)}</span>)}</CardContent></Card> : null}
     {addOnGroups.map((section) => <section key={section.title} className="space-y-3"><div><h2 className="text-base font-semibold text-foreground">{section.title}</h2><p className="text-sm text-muted-foreground">{section.description}</p></div>{section.limits.length ? <div className="grid gap-4 md:grid-cols-2">{section.limits.map((item) => { const rawExtraUnits = limitTargets[item.metric] ?? String(item.suggestedExtraUnits ?? 5); const extraUnits = Number(rawExtraUnits); const featureKey = Number.isInteger(extraUnits) ? limitFeatureKey(item.metric, extraUnits) : item.key; const request = addOns.find((row) => row.featureKey === featureKey); const active = isAddOnCurrentlyActive(request); const waiting = request?.status === "Requested"; const currentLimit = item.currentLimit ?? 0; const addedCapacity = limitExtraUnits(extraUnits); const newTotalLimit = currentLimit + addedCapacity; const invalid = !Number.isInteger(extraUnits) || extraUnits < 1; return <Card key={item.metric}><CardHeader><CardTitle className="text-base">{item.label}</CardTitle><CardDescription>Enter how many extra units you want to add to your current limit.</CardDescription></CardHeader><CardContent className="grid gap-3 sm:grid-cols-[1fr_auto]"><input type="number" inputMode="numeric" min={1} step={1} className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary" value={rawExtraUnits} onChange={(event) => setLimitTargets((targets) => ({ ...targets, [item.metric]: event.target.value.replace(/\D/g, "").slice(0, 6) }))} /><Button disabled={pendingKey === featureKey || active || waiting || invalid} onClick={() => requestAddOn(featureKey, `Add ${addedCapacity} extra units. New total limit after add-on: ${newTotalLimit}.`)}>{pendingKey === featureKey ? "Adding..." : active ? "Already added" : waiting ? "Request sent" : request?.status === "Rejected" ? "Add again" : "Add extra limit"}</Button><div className="text-xs text-muted-foreground sm:col-span-2"><p>{addOnStatusLabel(request)}{request ? ` · ${formatValidUntil(request.validUntil)}` : ""}</p><p>Current total limit: {item.currentLimit ?? "Unlimited"} · Current usage: {item.currentUsage}</p><p>New total limit after add-on: {Number.isInteger(extraUnits) ? newTotalLimit : "Enter a valid number"} · Added capacity: {limitExtraUnitText(addedCapacity)}</p><p>Estimated price: {limitPriceText(item, addedCapacity)}</p><p>Validity: {formatValidity(item.validityDays)}</p></div></CardContent></Card> })}</div> : null}{section.features.length ? <div className="grid gap-4 md:grid-cols-2">{section.features.map((feature) => { const request = addOns.find((item) => item.featureKey === feature.key); const active = isAddOnCurrentlyActive(request); const waiting = request?.status === "Requested"; return <Card key={feature.key}><CardHeader><CardTitle className="text-base">{feature.label}</CardTitle><CardDescription>Available as an add-on without changing your current plan.</CardDescription></CardHeader><CardContent className="flex items-center justify-between gap-3"><div><span className="text-sm text-muted-foreground">{addOnStatusLabel(request)}{request ? ` · ${formatValidUntil(request.validUntil)}` : ""}</span><p className="text-xs text-muted-foreground">Price: {formatMoney(feature.priceAmount, feature.priceCurrency)}</p><p className="text-xs text-muted-foreground">Validity: {formatValidity(feature.validityDays)}</p></div><Button disabled={pendingKey === feature.key || active || waiting} onClick={() => requestAddOn(feature.key)}>{pendingKey === feature.key ? "Adding..." : active ? "Already added" : waiting ? "Request sent" : request?.status === "Rejected" ? "Add again" : "Add Add-on"}</Button></CardContent></Card> })}</div> : null}</section>)}
     {!addOnGroups.length ? <Card><CardContent className="pt-6 text-sm text-muted-foreground">No additional paid features are available for this account.</CardContent></Card> : null}
+    <Dialog open={Boolean(pendingAddOnConfirmation)} onOpenChange={(open) => { if (!open) setPendingAddOnConfirmation(null) }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add paid add-on</DialogTitle>
+          <DialogDescription>This add-on will be enabled for your garage account.</DialogDescription>
+        </DialogHeader>
+        {pendingAddOnConfirmation?.note ? <p className="rounded-md border border-border bg-background p-3 text-sm text-muted-foreground">{pendingAddOnConfirmation.note}</p> : null}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">Cancel</Button>
+          </DialogClose>
+          <Button type="button" disabled={pendingKey === pendingAddOnConfirmation?.featureKey} onClick={() => pendingAddOnConfirmation ? confirmAddOnRequest(pendingAddOnConfirmation) : undefined}>
+            {pendingKey === pendingAddOnConfirmation?.featureKey ? "Adding..." : "Confirm add-on"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </main>
 
-  async function requestAddOn(featureKey: string, note?: string) {
+  function requestAddOn(featureKey: string, note?: string) {
     if (!accountId) return
-    const confirmMessage = note ? `Are you sure you want to add this add-on? It will be enabled for your account now.\n\n${note}` : "Are you sure you want to add this add-on? It will be enabled for your account now."
-    if (!window.confirm(confirmMessage)) return
+    setPendingAddOnConfirmation({ featureKey, note })
+  }
+
+  async function confirmAddOnRequest({ featureKey, note }: PendingAddOnConfirmation) {
+    if (!accountId) return
     setPendingKey(featureKey)
     try {
       const response = await fetch(appPath("/api/business/add-ons/request"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessAccountId: accountId, featureKey, note }) })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || payload?.ok === false) throw new Error(payload?.message ?? "Unable to request add-on")
       setAddOns((items) => [payload.addOnRequest, ...items.filter((item) => item.featureKey !== featureKey)])
+      setPendingAddOnConfirmation(null)
       toast.success("Add-on enabled.")
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to request add-on") } finally { setPendingKey(null) }
   }
