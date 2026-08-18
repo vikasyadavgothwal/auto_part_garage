@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { MessageSquare, Pen, Star, Trash2 } from "lucide-react"
+import { MessageSquare, MoreHorizontal, Pen, Star, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -236,33 +243,38 @@ export function ServicesTable({
                   </TableCell>
 
                   <TableCell className={tableCellMutedClass}>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        disabled={service.isPlanSuspended}
-                        onClick={() => onEdit?.(service)}
-                        aria-label={`Edit ${service.name}`}
-                        title={service.isPlanSuspended ? "Upgrade your plan to edit this suspended service." : `Edit ${service.name}`}
-                        className="rounded bg-brand-panel-strong p-2 text-foreground transition-all hover:bg-primary hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-brand-panel-strong disabled:hover:text-foreground"
-                      >
-                        <Pen className="h-4 w-4" />
-                      </Button>
-
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        disabled={deletingId === service.databaseId || service.isPlanSuspended}
-                        onClick={() => onDelete?.(service)}
-                        aria-label={`Delete ${service.name}`}
-                        title={service.isPlanSuspended ? "Suspended services are preserved and cannot be deleted while over plan limit." : `Delete ${service.name}`}
-                        className="rounded bg-brand-panel-strong p-2 text-foreground transition-all hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-brand-panel-strong"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          disabled={deletingId === service.databaseId}
+                          aria-label={`Actions for ${service.name}`}
+                          className="rounded bg-brand-panel-strong p-2 text-foreground transition-all hover:bg-primary hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-brand-panel-strong disabled:hover:text-foreground"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>Service actions</DropdownMenuLabel>
+                        <DropdownMenuItem
+                          disabled={service.isPlanSuspended}
+                          onSelect={() => onEdit?.(service)}
+                        >
+                          <Pen className="mr-2 h-4 w-4" />
+                          Edit service
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={deletingId === service.databaseId || service.isPlanSuspended}
+                          onSelect={() => onDelete?.(service)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete service
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

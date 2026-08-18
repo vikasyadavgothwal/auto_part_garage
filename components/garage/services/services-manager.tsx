@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react"
 import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -60,6 +60,11 @@ const emptyForm: GarageServiceFormValues = {
 
 const SERVICE_NAME_MAX = 120
 const SERVICE_CATEGORY_MAX = 80
+const INVALID_NUMBER_KEYS = new Set(["e", "E", "+", "-"])
+
+const preventInvalidNumberKey = (event: KeyboardEvent<HTMLInputElement>) => {
+  if (INVALID_NUMBER_KEYS.has(event.key)) event.preventDefault()
+}
 
 const validateServiceForm = (form: GarageServiceFormValues) => {
   if (form.name.trim().length < 2) return "Service name is required"
@@ -322,6 +327,8 @@ export function ServicesManager({
                   value={form.name}
                   onChange={(event) => updateForm("name", event.target.value)}
                   maxLength={SERVICE_NAME_MAX}
+                  placeholder="e.g., Oil change"
+                  autoComplete="off"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -333,6 +340,8 @@ export function ServicesManager({
                   value={form.category}
                   onChange={(event) => updateForm("category", event.target.value)}
                   maxLength={SERVICE_CATEGORY_MAX}
+                  placeholder="e.g., Maintenance"
+                  autoComplete="off"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -349,6 +358,9 @@ export function ServicesManager({
                   onChange={(event) =>
                     updateForm("durationMinutes", event.target.value)
                   }
+                  onKeyDown={preventInvalidNumberKey}
+                  inputMode="numeric"
+                  placeholder="60"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -363,6 +375,9 @@ export function ServicesManager({
                   step="0.01"
                   value={form.price}
                   onChange={(event) => updateForm("price", event.target.value)}
+                  onKeyDown={preventInvalidNumberKey}
+                  inputMode="decimal"
+                  placeholder="199.00"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>

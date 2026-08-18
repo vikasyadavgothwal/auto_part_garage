@@ -12,10 +12,21 @@ async function proxySettings(request: NextRequest, method: "GET" | "PATCH") {
     contentType: method === "PATCH" ? "application/json" : null,
     userAgent: request.headers.get("user-agent"),
   })
-  const response = new NextResponse(await backend.text(), {
+  const contentType = backend.headers.get("content-type") ?? ""
+  const body = await backend.text()
+  const responseBody =
+    contentType.includes("application/json")
+      ? body
+      : JSON.stringify({
+          ok: false,
+          message: "Garage settings server returned an invalid response.",
+        })
+  const response = new NextResponse(responseBody, {
     status: backend.status,
     headers: {
-      "content-type": backend.headers.get("content-type") ?? "application/json",
+      "content-type": contentType.includes("application/json")
+        ? contentType
+        : "application/json",
     },
   })
   applySetCookieHeaders(response, getSetCookieHeaders(backend.headers))

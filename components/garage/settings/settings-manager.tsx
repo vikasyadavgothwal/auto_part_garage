@@ -333,14 +333,23 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     if (form.address.length > MAX_ADDRESS_LENGTH) {
       return `Address must be ${MAX_ADDRESS_LENGTH} characters or fewer`
     }
+    if (!form.address.trim()) {
+      return "Address is required"
+    }
     if (form.about.length > MAX_ABOUT_LENGTH) {
       return `About paragraph must be ${MAX_ABOUT_LENGTH} characters or fewer`
+    }
+    if (!form.about.trim()) {
+      return "About paragraph is required"
     }
     for (const [label, value] of [
       ["Country", form.country],
       ["State", form.state],
       ["City", form.city],
     ] as const) {
+      if (!value.trim()) {
+        return `${label} is required`
+      }
       if (value && !PLACE_PATTERN.test(value)) {
         return `${label} can use letters, spaces, apostrophes, periods, and hyphens only`
       }
@@ -442,13 +451,14 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payloadFromForm(values)),
     })
-    const payload = (await response.json()) as SettingsPayload
-    if (!response.ok || !payload.ok || !payload.profile) {
-      throw new Error(payload.message || "Unable to save settings")
+    const payload = (await response.json().catch(() => null)) as SettingsPayload | null
+    const profile = payload?.profile
+    if (!response.ok || !payload?.ok || !profile) {
+      throw new Error(payload?.message || "Unable to save settings. Server returned an invalid response.")
     }
-    setCurrentProfile(payload.profile)
-    syncProfileForm(payload.profile)
-    return payload.profile
+    setCurrentProfile(profile)
+    syncProfileForm(profile)
+    return profile
   }
 
   const saveSettings = async (event: FormEvent<HTMLFormElement>) => {
@@ -853,8 +863,9 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 <Input
                   value={otp}
                   onChange={(event) => setOtp(normalizeDigits(event.target.value, 6))}
-                  placeholder="OTP"
+                  placeholder="Enter 6-digit OTP"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   maxLength={6}
                   className="h-9 border-border bg-brand-surface sm:max-w-32"
                 />
@@ -1096,6 +1107,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 setField("address", normalizeLimitedText(event.target.value, MAX_ADDRESS_LENGTH))
               }
               maxLength={MAX_ADDRESS_LENGTH}
+              placeholder="Enter full garage address"
               className="min-h-24 w-full rounded-lg border border-border bg-brand-surface px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>
@@ -1107,6 +1119,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               value={form.country}
               onChange={(event) => setField("country", normalizePlaceText(event.target.value))}
               maxLength={MAX_PLACE_LENGTH}
+              placeholder="Enter country"
+              autoComplete="country-name"
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -1118,6 +1132,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               value={form.state}
               onChange={(event) => setField("state", normalizePlaceText(event.target.value))}
               maxLength={MAX_PLACE_LENGTH}
+              placeholder="Enter state or emirate"
+              autoComplete="address-level1"
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -1129,6 +1145,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               value={form.city}
               onChange={(event) => setField("city", normalizePlaceText(event.target.value))}
               maxLength={MAX_PLACE_LENGTH}
+              placeholder="Enter city"
+              autoComplete="address-level2"
               className="h-11 border-border bg-brand-surface"
             />
           </div>
@@ -1214,6 +1232,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 setField("about", normalizeLimitedText(event.target.value, MAX_ABOUT_LENGTH))
               }
               maxLength={MAX_ABOUT_LENGTH}
+              placeholder="Describe your garage services, specialties, and customer promise"
               className="min-h-32 w-full rounded-lg border border-border bg-brand-surface px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>
