@@ -47,6 +47,8 @@ type RoleItem = {
   permissionIds: string[]
 }
 
+const roleNamePattern = /^[A-Za-z0-9][A-Za-z0-9 _-]*$/
+
 function statusText(access: BusinessAccessEntry | undefined) {
   const action = access?.actions?.["roles.create"]
   if (action && action.allowed === false) {
@@ -186,8 +188,8 @@ export function GarageRolesPage({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           businessAccountId: access.businessAccount?.id,
-          name,
-          description,
+          name: name.trim(),
+          description: description.trim(),
           permissionIds: selectedPermissionIds,
         }),
       })
@@ -225,8 +227,8 @@ export function GarageRolesPage({
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            name,
-            description,
+            name: name.trim(),
+            description: description.trim(),
             permissionIds: selectedPermissionIds,
           }),
         },
@@ -287,6 +289,25 @@ export function GarageRolesPage({
       const unableMessage = roleMessage || "Role management is not available."
       setMessage(unableMessage)
       toast.error(unableMessage)
+      return
+    }
+    const normalizedName = name.trim()
+    if (normalizedName.length < 2 || normalizedName.length > 80 || !roleNamePattern.test(normalizedName)) {
+      const errorMessage = "Role name must be 2 to 80 characters and use letters, numbers, spaces, hyphens, or underscores only."
+      setMessage(errorMessage)
+      toast.error(errorMessage)
+      return
+    }
+    if (description.trim().length > 500) {
+      const errorMessage = "Role description must be 500 characters or fewer."
+      setMessage(errorMessage)
+      toast.error(errorMessage)
+      return
+    }
+    if (!selectedPermissionIds.length) {
+      const errorMessage = "Select at least one permission for this role."
+      setMessage(errorMessage)
+      toast.error(errorMessage)
       return
     }
     if (editingRole) {
@@ -382,7 +403,7 @@ export function GarageRolesPage({
           </DialogHeader>
           <form onSubmit={submitRole} className="mt-4 space-y-4">
             <div className="grid gap-3">
-              <Label htmlFor="garage-role-name">Role name</Label>
+              <Label htmlFor="garage-role-name">Role name <span className="text-destructive">*</span></Label>
               <Input
                 id="garage-role-name"
                 type="text"
@@ -390,6 +411,8 @@ export function GarageRolesPage({
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Role name"
+                minLength={2}
+                maxLength={80}
               />
             </div>
             <div className="grid gap-2">
@@ -400,6 +423,7 @@ export function GarageRolesPage({
                 onChange={(event) => setDescription(event.target.value)}
                 className="min-h-16 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="Role purpose"
+                maxLength={500}
               />
             </div>
             <div className="grid gap-2">

@@ -28,7 +28,30 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <Toaster position="top-right" richColors closeButton />
+        <Toaster
+          position="top-right"
+          theme="dark"
+          richColors={false}
+          className="brand-toaster"
+          closeButton
+          expand={true}
+          toastOptions={{
+            classNames: {
+              toast: "text-[var(--normal-text)] border border-[var(--normal-border)]",
+              title: "text-[var(--normal-text)]",
+              description: "text-[var(--normal-text)]",
+              icon: "text-current",
+              closeButton:
+                "text-current hover:text-current",
+              actionButton:
+                "text-current hover:text-current border border-[currentColor]",
+              cancelButton:
+                "text-current hover:text-current border border-[currentColor]",
+              success: "text-[var(--success-text)] border-[var(--success-border)]",
+              error: "text-[var(--error-text)] border-[var(--error-border)]",
+            },
+          }}
+        />
       </body>
     </html>
   );

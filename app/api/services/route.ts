@@ -5,7 +5,11 @@ import { applySetCookieHeaders, getSetCookieHeaders, requestBackend } from "@/li
 export const dynamic = "force-dynamic"
 
 async function proxyServices(request: NextRequest, method: "GET" | "POST") {
-  const backend = await requestBackend("/api/v1/garage/services", {
+  const backendPath =
+    method === "GET"
+      ? `/api/v1/garage/services${request.nextUrl.search}`
+      : "/api/v1/garage/services"
+  const backend = await requestBackend(backendPath, {
     method,
     cookieHeader: request.headers.get("cookie"),
     body: method === "POST" ? await request.text() : null,

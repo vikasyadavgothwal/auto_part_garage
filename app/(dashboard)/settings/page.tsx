@@ -22,7 +22,10 @@ async function getSettingsContext() {
 }
 
 export default async function SettingsPage() {
-  const [user, context] = await Promise.all([requireGarageUser(), getSettingsContext()])
+  const [user, context] = await Promise.all([
+    requireGarageUser(),
+    getSettingsContext(),
+  ])
   const profile = context.isOwner ? await getGarageSettings() : null
 
   if (profile) {

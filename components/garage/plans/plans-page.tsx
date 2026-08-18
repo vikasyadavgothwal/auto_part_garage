@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { BillingPrice } from "@/components/garage/plans/billing-price"
 import { ChangePlanButton } from "@/components/garage/plans/change-plan-button"
+import { PaymentHistoryTable } from "@/components/garage/plans/payment-history-table"
 import { requestBackend } from "@/lib/auth/backend"
 
 type BusinessPlan = {
@@ -36,12 +37,15 @@ type BusinessAccess = {
     usage?: { staff?: number; appointments?: number; services?: number }
   }
   activeAddOns?: ActiveAddOn[]
+  paymentTransactions?: PaymentTransaction[]
   entitlements?: { subscription?: { activatedAt?: string | null; endsAt?: string | null }; activeAddOns?: ActiveAddOn[] }
 }
 type ActiveAddOn = { id: string; label: string; featureKey: string; status: string; validFrom?: string | null; validUntil?: string | null; renewalAt?: string | null }
 
 type AccessPayload = { ok: boolean; access?: BusinessAccess[] }
 type PlansPayload = { ok: boolean; plans?: BusinessPlan[] }
+type PaymentTransaction = { id: string; type: string; sourceKey?: string | null; description: string; amount: number; currency: string; status: string; createdAt: string }
+type TransactionsPayload = { ok: boolean; transactions?: PaymentTransaction[] }
 
 const limitText = (value: number | null | undefined) => value == null ? "Unlimited" : String(value)
 const reportText = (plan: BusinessPlan) => plan.reportLevel === "premium" ? "Premium analytics" : plan.reportLevel === "standard" ? "Dashboard, usage, activity" : plan.reports?.activity ? "Dashboard, usage, activity" : plan.reports?.usage ? "Dashboard and usage" : "Dashboard"
@@ -68,11 +72,14 @@ async function readPlanData() {
   const [accessResponse, plansResponse] = await Promise.all([requestBackend("/api/v1/business/access", { cookieHeader }), requestBackend("/api/v1/public/business/plans")])
   const accessPayload = accessResponse.ok ? ((await accessResponse.json()) as AccessPayload) : { ok: false }
   const plansPayload = plansResponse.ok ? ((await plansResponse.json()) as PlansPayload) : { ok: false }
-  return { access: accessPayload.access?.find(isGarageAccess), plans: (plansPayload.plans ?? []).filter((plan) => plan.accountType === "Garage") }
+  const access = accessPayload.access?.find(isGarageAccess)
+  const transactionsResponse = access ? await requestBackend(`/api/v1/business/transactions?businessAccountId=${encodeURIComponent(access.businessAccount.id)}`, { cookieHeader }) : null
+  const transactionsPayload = transactionsResponse?.ok ? ((await transactionsResponse.json()) as TransactionsPayload) : { ok: false }
+  return { access, plans: (plansPayload.plans ?? []).filter((plan) => plan.accountType === "Garage"), transactions: access?.paymentTransactions ?? transactionsPayload.transactions ?? [] }
 }
 
 export async function PlansPage() {
-  const { access, plans } = await readPlanData()
+  const { access, plans, transactions } = await readPlanData()
   const currentPlan = access?.businessAccount.plan
   const usage = access?.businessAccount.usage
   const activeAddOns = access?.activeAddOns ?? access?.entitlements?.activeAddOns ?? []
@@ -85,7 +92,7 @@ export async function PlansPage() {
       
       {reachedLimits.length ? <p className="mt-3 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-sm text-amber-200">Usage has reached plan limits for: {reachedLimits.map((item) => item.label).join(", ")}. Ask admin for a higher plan.</p> : null}
     </section> : null}
-    <Card>
+    {currentPlan?.code !== "Enterprise" ? <Card>
       <CardHeader>
         <CardTitle>Active add-ons</CardTitle>
         <CardDescription>Permissions enabled by admin for this Garage account, with expiry and renewal dates.</CardDescription>
@@ -112,7 +119,8 @@ export async function PlansPage() {
           </div>
         ) : <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">No active add-ons for this account.</p>}
       </CardContent>
-    </Card>
+    </Card> : null}
     <section className="grid gap-4 lg:grid-cols-3">{plans.map((plan) => { const isCurrent = isSamePlan(plan, currentPlan); return <div key={plan.id} className={`rounded-lg border bg-card p-5 shadow-sm ${isCurrent ? "border-primary" : "border-border"}`}><div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{plan.name}</h2><p className="mt-1 text-sm text-muted-foreground">{plan.description}</p></div>{isCurrent ? <span className="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">Current</span> : null}</div>{plan.code !== "Free" ? <div className="mt-4"><BillingPrice code={plan.code} currency={plan.price.currency} monthlyAmount={plan.price.amount} yearlyAmount={plan.price.yearlyAmount} /></div> : null}<dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-muted-foreground">Staff</dt><dd>{limitText(plan.limits.staff)}</dd></div><div><dt className="text-muted-foreground">Roles</dt><dd>{limitText(plan.limits.roles)}</dd></div><div><dt className="text-muted-foreground">Services</dt><dd>{limitText(plan.limits.services)}</dd></div><div><dt className="text-muted-foreground">Appointments</dt><dd>{limitText(plan.limits.appointments)}</dd></div><div><dt className="text-muted-foreground">Reports</dt><dd>{reportText(plan)}</dd></div><div><dt className="text-muted-foreground">Login security</dt><dd>{securityText(plan)}</dd></div><div><dt className="text-muted-foreground">Support</dt><dd>{supportText(plan)}</dd></div><div><dt className="text-muted-foreground">API access</dt><dd>{apiText(plan)}</dd></div>{plan.code !== "Free" ? <div><dt className="text-muted-foreground">Monthly days</dt><dd>{plan.price.monthlyBillingDays ?? 30}</dd></div> : null}</dl>{isCurrent ? <Button className="mt-5 w-full" variant="secondary" disabled>Current Plan</Button> : currentPlan && access ? <ChangePlanButton businessAccountId={access.businessAccount.id} currentPlanName={currentPlan.name} planId={plan.id} planName={plan.name} actionLabel={plan.code === "Free" ? "Downgrade Plan" : currentPlan.code === "Free" ? "Upgrade Plan" : "Change Plan"} /> : <Button className="mt-5 w-full" variant="secondary" disabled>Plan unavailable</Button>}</div> })}</section>
+    <PaymentHistoryTable accountLabel="Garage" transactions={transactions} />
   </div>
 }

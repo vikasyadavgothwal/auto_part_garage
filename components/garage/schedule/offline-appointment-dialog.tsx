@@ -131,7 +131,7 @@ export function OfflineAppointmentDialog({
     ...emptyForm,
     serviceId: activeServices[0]?.databaseId ?? "",
   })
-  const [error, setError] = useState("")
+  const [, setError] = useState("")
   const unavailableTimes = useMemo(() => {
     if (!form.bookingDate) return new Set<string>()
     return new Set(
@@ -283,19 +283,10 @@ export function OfflineAppointmentDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {error ? (
-            <p
-              role="alert"
-              className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-            >
-              {error}
-            </p>
-          ) : null}
-
           <form className="space-y-4" onSubmit={saveAppointment} noValidate>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="offline-service">Service</Label>
+                <Label htmlFor="offline-service">Service <span className="text-destructive">*</span></Label>
                 <select
                   id="offline-service"
                   value={form.serviceId}
@@ -315,17 +306,19 @@ export function OfflineAppointmentDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="offline-customer-name">Customer Name</Label>
+                <Label htmlFor="offline-customer-name">Customer Name <span className="text-destructive">*</span></Label>
                 <Input
                   id="offline-customer-name"
                   value={form.customerName}
                   onChange={(event) => updateForm("customerName", event.target.value)}
+                  required
+                  maxLength={160}
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="offline-phone">Phone</Label>
+                <Label htmlFor="offline-phone">Phone <span className="text-destructive">*</span></Label>
                 <Input
                   id="offline-phone"
                   type="text"
@@ -350,11 +343,12 @@ export function OfflineAppointmentDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="offline-date">Date</Label>
+                <Label htmlFor="offline-date">Date <span className="text-destructive">*</span></Label>
                 <Input
                   id="offline-date"
                   type="date"
                   min={new Date().toISOString().slice(0, 10)}
+                  required
                   value={form.bookingDate}
                   onChange={(event) => updateForm("bookingDate", event.target.value)}
                   onInput={(event) =>
@@ -419,6 +413,7 @@ export function OfflineAppointmentDialog({
                   id="offline-vehicle-make"
                   value={form.vehicleMake}
                   onChange={(event) => updateForm("vehicleMake", event.target.value)}
+                  maxLength={80}
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -429,6 +424,7 @@ export function OfflineAppointmentDialog({
                   id="offline-vehicle-model"
                   value={form.vehicleModel}
                   onChange={(event) => updateForm("vehicleModel", event.target.value)}
+                  maxLength={80}
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>

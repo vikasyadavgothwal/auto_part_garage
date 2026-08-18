@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react"
 import { Plus } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
 import { ServiceManagementTipsCard } from "@/components/garage/services/service-management-tips-card"
@@ -28,6 +29,7 @@ import {
   type GarageServiceStatus,
   type GarageServiceTableItem,
 } from "@/lib/garage-services"
+import type { PaginationMeta } from "@/lib/pagination"
 import { appPath } from "@/lib/routes"
 
 type ServicesManagerProps = {
@@ -36,11 +38,14 @@ type ServicesManagerProps = {
   actionLabel: string
   tips: string[]
   initialServices: GarageServiceTableItem[]
+  statServices: GarageServiceTableItem[]
+  pagination: PaginationMeta
 }
 
 type ServiceMutationPayload = {
   ok: boolean
   service?: GarageServiceRecord
+  services?: GarageServiceRecord[]
   id?: string
   message?: string
 }
@@ -90,7 +95,10 @@ export function ServicesManager({
   actionLabel,
   tips,
   initialServices,
+  statServices,
+  pagination,
 }: ServicesManagerProps) {
+  const router = useRouter()
   const [services, setServices] = useState(initialServices)
   const [form, setForm] = useState<GarageServiceFormValues>(emptyForm)
   const [editingService, setEditingService] = useState<GarageServiceTableItem | null>(null)
@@ -100,11 +108,14 @@ export function ServicesManager({
   const [pendingDeleteService, setPendingDeleteService] =
     useState<GarageServiceTableItem | null>(null)
   const [, setError] = useState("")
-  const stats = useMemo(() => buildServiceStats(services), [services])
+  const stats = useMemo(() => buildServiceStats(statServices), [statServices])
   const planSuspendedServices = useMemo(
-    () => services.filter((service) => service.isPlanSuspended),
-    [services],
+    () => statServices.filter((service) => service.isPlanSuspended),
+    [statServices],
   )
+  const planSuspensionReason =
+    planSuspendedServices.find((service) => service.planSuspensionReason)?.planSuspensionReason ??
+    "Your current plan/add-ons limit the number of active services. Extra services are safely preserved but hidden from customer booking until your limit increases."
 
   const openCreateDialog = () => {
     setEditingService(null)
@@ -184,11 +195,14 @@ export function ServicesManager({
           ? current.map((service) =>
               service.databaseId === formatted.databaseId ? formatted : service,
             )
-          : [formatted, ...current],
+          : pagination.page === 1
+            ? [formatted, ...current].slice(0, pagination.pageSize)
+            : current,
       )
       setIsDialogOpen(false)
       setEditingService(null)
       setForm(emptyForm)
+      router.refresh()
       toast.success(editingService ? "Service updated successfully" : "Service added successfully")
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : "Unable to save service"
@@ -222,6 +236,7 @@ export function ServicesManager({
         current.filter((item) => item.databaseId !== pendingDeleteService.databaseId),
       )
       setPendingDeleteService(null)
+      router.refresh()
       toast.success("Service deleted successfully")
     } catch (deleteError) {
       const message = deleteError instanceof Error ? deleteError.message : "Unable to delete service"
@@ -271,9 +286,7 @@ export function ServicesManager({
       {planSuspendedServices.length ? (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
           <p className="font-semibold text-amber-200">Some services are temporarily inactive due to your current plan.</p>
-          <p className="mt-1 text-amber-100/90">
-            Your Free plan allows limited active services. Extra services are safely preserved but hidden from customer booking until your plan is upgraded or admin increases your limit.
-          </p>
+          <p className="mt-1 text-amber-100/90">{planSuspensionReason}</p>
           <p className="mt-2 text-xs text-amber-100/80">
             Suspended services: {planSuspendedServices.map((service) => service.name).join(", ")}
           </p>
@@ -283,6 +296,7 @@ export function ServicesManager({
       <ServiceStats stats={stats} />
       <ServicesTable
         services={services}
+        pagination={pagination}
         deletingId={deletingId}
         onEdit={openEditDialog}
         onDelete={requestDeleteService}
@@ -302,7 +316,7 @@ export function ServicesManager({
           <form className="space-y-4" onSubmit={saveService} noValidate>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="service-name">Service Name</Label>
+                <Label htmlFor="service-name">Service Name <span className="text-destructive">*</span></Label>
                 <Input
                   id="service-name"
                   value={form.name}
@@ -313,7 +327,7 @@ export function ServicesManager({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="service-category">Category</Label>
+                <Label htmlFor="service-category">Category <span className="text-destructive">*</span></Label>
                 <Input
                   id="service-category"
                   value={form.category}
@@ -324,12 +338,13 @@ export function ServicesManager({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="service-duration">Duration</Label>
+                <Label htmlFor="service-duration">Duration <span className="text-destructive">*</span></Label>
                 <Input
                   id="service-duration"
                   type="number"
                   min="1"
                   max="1440"
+                  step="1"
                   value={form.durationMinutes}
                   onChange={(event) =>
                     updateForm("durationMinutes", event.target.value)
@@ -339,11 +354,12 @@ export function ServicesManager({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="service-price">Price</Label>
+                <Label htmlFor="service-price">Price <span className="text-destructive">*</span></Label>
                 <Input
                   id="service-price"
                   type="number"
                   min="0"
+                  max="999999"
                   step="0.01"
                   value={form.price}
                   onChange={(event) => updateForm("price", event.target.value)}
@@ -352,7 +368,7 @@ export function ServicesManager({
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="service-status">Status</Label>
+                <Label htmlFor="service-status">Status <span className="text-destructive">*</span></Label>
                 <select
                   id="service-status"
                   value={form.status}

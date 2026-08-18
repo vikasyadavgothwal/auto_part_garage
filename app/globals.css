@@ -208,4 +208,28 @@
       linear-gradient(to bottom, rgb(255 255 255 / 0.08) 1px, transparent 1px);
     background-size: 28px 28px;
   }
+
+  .brand-toaster {
+    --normal-bg: #0a0a0a;
+    --normal-text: var(--brand-success);
+    --normal-border: #2a2a2a;
+    --normal-bg-hover: #1a1a1a;
+    --normal-border-hover: var(--brand-success);
+    --success-bg: color-mix(in srgb, var(--brand-success) 18%, #0a0a0a);
+    --success-text: var(--brand-success);
+    --success-border: color-mix(in srgb, var(--brand-success) 55%, var(--border));
+    --error-bg: color-mix(in srgb, var(--destructive) 18%, var(--brand-panel));
+    --error-text: var(--destructive);
+    --error-border: color-mix(in srgb, var(--destructive) 55%, var(--border));
+    --warning-bg: color-mix(in srgb, var(--brand-success) 18%, #0a0a0a);
+    --warning-text: var(--brand-success);
+    --warning-border: color-mix(in srgb, var(--brand-success) 55%, var(--border));
+    --info-bg: color-mix(in srgb, var(--brand-success) 16%, #0a0a0a);
+    --info-text: var(--brand-success);
+    --info-border: color-mix(in srgb, var(--brand-success) 55%, var(--border));
+    --loading-bg: #1a1a1a;
+    --loading-text: var(--brand-success);
+    --loading-border: #2a2a2a;
+    --border-radius: var(--radius-lg);
+  }
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react"
 import { UserRound } from "lucide-react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,8 +37,6 @@ export function AccountSettingsCard({
     lastName: initialAccount?.lastName ?? "",
     email: initialAccount?.email ?? "",
   })
-  const [message, setMessage] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -64,11 +63,9 @@ export function AccountSettingsCard({
     const firstName = form.firstName.trim()
     const lastName = form.lastName.trim()
     const email = form.email.trim().toLowerCase()
-    setMessage(null)
-    setError(null)
-    if (!firstName) return setError("First name is required.")
-    if (!lastName) return setError("Last name is required.")
-    if (allowEmail && (!email || email.length > 254 || !emailPattern.test(email))) return setError("Enter a valid email address.")
+    if (!firstName || firstName.length > 100) return toast.error("First name is required and must be 100 characters or fewer.")
+    if (!lastName || lastName.length > 100) return toast.error("Last name is required and must be 100 characters or fewer.")
+    if (allowEmail && (!email || email.length > 254 || !emailPattern.test(email))) return toast.error("Enter a valid email address.")
 
     setIsSaving(true)
     try {
@@ -90,9 +87,9 @@ export function AccountSettingsCard({
         lastName: payload.account.lastName ?? "",
         email: payload.account.email ?? "",
       })
-      setMessage("Account updated successfully.")
+      toast.success("Account updated successfully.")
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to update account.")
+      toast.error(saveError instanceof Error ? saveError.message : "Unable to update account.")
     } finally {
       setIsSaving(false)
     }
@@ -106,21 +103,19 @@ export function AccountSettingsCard({
       <CardContent>
         <form onSubmit={submit} noValidate className="grid gap-5 md:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="account-first-name">First Name</Label>
-            <Input id="account-first-name" value={form.firstName} onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))} maxLength={100} className="border-border bg-brand-surface" />
+            <Label htmlFor="account-first-name">First Name <span className="text-destructive">*</span></Label>
+            <Input id="account-first-name" value={form.firstName} onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))} maxLength={100} required className="border-border bg-brand-surface" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="account-last-name">Last Name</Label>
-            <Input id="account-last-name" value={form.lastName} onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))} maxLength={100} className="border-border bg-brand-surface" />
+            <Label htmlFor="account-last-name">Last Name <span className="text-destructive">*</span></Label>
+            <Input id="account-last-name" value={form.lastName} onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))} maxLength={100} required className="border-border bg-brand-surface" />
           </div>
           {allowEmail ? (
             <div className="space-y-2">
-              <Label htmlFor="account-email">Email</Label>
-              <Input id="account-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} maxLength={254} className="border-border bg-brand-surface" />
+              <Label htmlFor="account-email">Email <span className="text-destructive">*</span></Label>
+              <Input id="account-email" type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} maxLength={254} required className="border-border bg-brand-surface" />
             </div>
           ) : null}
-          {error ? <p className="text-sm text-destructive md:col-span-3">{error}</p> : null}
-          {message ? <p className="text-sm text-emerald-500 md:col-span-3">{message}</p> : null}
           <div className="md:col-span-3">
             <Button type="submit" disabled={isSaving} className="gap-2">
               <UserRound className="size-4" />

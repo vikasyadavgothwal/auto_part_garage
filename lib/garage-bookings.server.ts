@@ -7,6 +7,8 @@ import {
   type BookingsPageData,
   type SchedulePageData,
 } from "@/lib/garage-page-data"
+import { tablePageSize, type PaginationMeta } from "@/lib/pagination"
+import type { GarageProfileRecord } from "@/lib/garage-settings"
 
 export type GarageBookingRecord = {
   id: string
@@ -36,6 +38,7 @@ export type GarageBookingRecord = {
 type GarageBookingsPayload = {
   ok: boolean
   bookings?: GarageBookingRecord[]
+  pagination?: PaginationMeta
   message?: string
 }
 
@@ -101,6 +104,41 @@ const inCurrentWeek = (booking: GarageBookingRecord) => inWeek(booking)
 const dayName = (date: string) =>
   asDate(date).toLocaleDateString("en-US", { weekday: "long" })
 
+const normalizeDayAvailability = (profile?: GarageProfileRecord) => {
+  const defaultAvailability = Object.fromEntries(
+    schedulePageData.days.map((day) => [day, true]),
+  ) as Record<string, boolean>
+
+  if (!profile) {
+    return defaultAvailability
+  }
+
+  const hasHoursByDay = Object.keys(profile.workingHoursByDay ?? {}).length > 0
+  const selectedDays = hasHoursByDay
+    ? Object.entries(profile.workingHoursByDay)
+        .filter(([, hours]) => hours?.enabled)
+        .map(([day]) => day)
+    : profile.workingDays
+
+  const availability = Object.fromEntries(
+    schedulePageData.days.map((day) => [day, false]),
+  ) as Record<string, boolean>
+
+  if (selectedDays.length === 0) {
+    for (const day of schedulePageData.days) {
+      availability[day] = true
+    }
+
+    return availability
+  }
+
+  for (const day of selectedDays) {
+    availability[day] = true
+  }
+
+  return availability
+}
+
 const sortTimes = (times: string[]) =>
   [...times].sort((a, b) => {
     const parsedA = Date.parse(`2000-01-01 ${a}`)
@@ -109,7 +147,7 @@ const sortTimes = (times: string[]) =>
   })
 
 export async function getGarageBookings() {
-  const response = await requestBackend("/api/v1/garage/bookings", {
+  const response = await requestBackend("/api/v1/garage/bookings?all=1", {
     cookieHeader: (await cookies()).toString(),
   })
 
@@ -119,6 +157,30 @@ export async function getGarageBookings() {
 
   const payload = (await response.json()) as GarageBookingsPayload
   return payload.bookings ?? []
+}
+
+export async function getGarageBookingsPage(page: number) {
+  const response = await requestBackend(
+    `/api/v1/garage/bookings?page=${page}&pageSize=${tablePageSize}`,
+    {
+      cookieHeader: (await cookies()).toString(),
+    },
+  )
+
+  if (!response.ok) {
+    return {
+      bookings: [],
+      pagination: { page, pageSize: tablePageSize, total: 0, totalPages: 1 },
+    }
+  }
+
+  const payload = (await response.json()) as GarageBookingsPayload
+  return {
+    bookings: payload.bookings ?? [],
+    pagination:
+      payload.pagination ??
+      { page, pageSize: tablePageSize, total: 0, totalPages: 1 },
+  }
 }
 
 export function buildBookingsPageData(
@@ -187,7 +249,9 @@ export function buildBookingsPageData(
 export function buildSchedulePageData(
   bookings: GarageBookingRecord[],
   weekOffset = 0,
+  profile?: GarageProfileRecord,
 ): SchedulePageData {
+  const dayAvailability = normalizeDayAvailability(profile)
   const scheduledBookings = bookings.filter(
     (booking) => booking.bookingDate && booking.bookingTime,
   )
@@ -216,10 +280,16 @@ export function buildSchedulePageData(
     }
   }
 
+  const activeWeekBookings = weekBookings.filter((booking) => {
+    if (!booking.bookingDate) return false
+    return dayAvailability[dayName(booking.bookingDate)]
+  })
+
   const { monday, sunday } = weekRange(weekOffset)
 
   return {
     ...schedulePageData,
+    dayAvailability,
     weekLabel: `Week of ${monday.toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
@@ -236,7 +306,17 @@ export function buildSchedulePageData(
       { label: "Today", value: `${todayBookings.length} bookings` },
       {
         label: "Available Slots",
-        value: String(Math.max(0, timeSlots.length * schedulePageData.days.length - weekBookings.length)),
+        value: String(
+          Math.max(
+            0,
+            timeSlots.length *
+              Math.max(
+              1,
+              schedulePageData.days.filter((day) => dayAvailability[day]).length,
+            ) -
+              activeWeekBookings.length,
+          ),
+        ),
       },
     ],
     timeSlots,

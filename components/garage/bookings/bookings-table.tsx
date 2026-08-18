@@ -39,11 +39,14 @@ import {
   tableHeaderRowClass,
   tableRowClass,
 } from "@/components/garage/shared/table-styles"
+import { TablePagination } from "@/components/garage/shared/table-pagination"
 import type { BookingsPageData } from "@/lib/garage-page-data"
+import type { PaginationMeta } from "@/lib/pagination"
 import { appPath } from "@/lib/routes"
 
 type BookingsTableProps = {
   bookings: BookingsPageData["bookings"]
+  pagination: PaginationMeta
 }
 
 type Booking = BookingsPageData["bookings"][number]
@@ -64,8 +67,14 @@ function formatStatus(value: BookingStatus) {
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
 
+function hasCompletionOtpRecipient(booking: Booking) {
+  return Boolean(
+    booking.customerId?.trim() && booking.customerEmail?.trim(),
+  )
+}
+
 function requiresCompletionOtp(booking: Booking, status: BookingStatus) {
-  return status === "completed" && Boolean(booking.customerId)
+  return status === "completed" && hasCompletionOtpRecipient(booking)
 }
 
 function DetailRow({
@@ -87,7 +96,7 @@ function DetailRow({
   )
 }
 
-export function BookingsTable({ bookings }: BookingsTableProps) {
+export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
   const router = useRouter()
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [pendingStatusChange, setPendingStatusChange] =
@@ -102,6 +111,10 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
     setStatusError("")
     setCompletionOtp("")
     setOtpMessage("")
+
+    if (requiresCompletionOtp(booking, status)) {
+      sendCompletionOtp(booking)
+    }
   }
 
   function closeStatusDialog() {
@@ -112,15 +125,15 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
     setOtpMessage("")
   }
 
-  function sendCompletionOtp() {
-    if (!pendingStatusChange?.booking.backendId) return
+  function sendCompletionOtp(booking = pendingStatusChange?.booking) {
+    if (!booking?.backendId) return
 
     setStatusError("")
     setOtpMessage("")
     startTransition(async () => {
       const response = await fetch(
         appPath(
-          `/api/bookings/${pendingStatusChange.booking.backendId}/completion-otp`,
+          `/api/bookings/${booking.backendId}/completion-otp`,
         ),
         { method: "POST" },
       )
@@ -293,6 +306,7 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
             </TableBody>
           </Table>
         </div>
+        <TablePagination pagination={pagination} />
       </Card>
 
       <Dialog
@@ -397,9 +411,9 @@ export function BookingsTable({ bookings }: BookingsTableProps) {
                   type="button"
                   variant="outline"
                   disabled={isPending}
-                  onClick={sendCompletionOtp}
+                  onClick={() => sendCompletionOtp()}
                 >
-                  {isPending ? "Sending..." : "Send OTP"}
+                  {isPending ? "Sending..." : "Resend OTP"}
                 </Button>
               </div>
               {otpMessage ? (

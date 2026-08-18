@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 type ActionState = { allowed: boolean; reason: string | null }
 
 type ReportsDashboardProps = {
-  planTier: "Free" | "Pro" | "Enterprise"
   usage: ActionState
   activity: ActionState
   monthlyRevenue: Array<{ month: string; revenue: number; appointments: number }>
@@ -25,13 +24,12 @@ function LockedCard({ title, message }: { title: string; message: string }) {
   return <Card className="border-amber-500/30 bg-amber-500/10"><CardHeader><CardTitle>{title}</CardTitle></CardHeader><CardContent className="text-sm text-amber-200">{message}</CardContent></Card>
 }
 
-export function ReportsDashboard({ planTier, usage, activity, monthlyRevenue, serviceDemand, statusMix, dailyLoad, kpis }: ReportsDashboardProps) {
-  const isEnterprise = planTier === "Enterprise"
-  const isProOrAbove = planTier === "Pro" || isEnterprise
+export function ReportsDashboard({ usage, activity, monthlyRevenue, serviceDemand, statusMix, dailyLoad, kpis }: ReportsDashboardProps) {
+  const chartsAllowed = usage.allowed || activity.allowed
 
   return (
     <div className="space-y-5">
-      {isProOrAbove ? (
+      {chartsAllowed ? (
         <div className="grid gap-5 xl:grid-cols-[1.35fr_0.9fr]">
           <Card className="overflow-hidden border-border bg-card">
             <CardHeader><CardTitle>Revenue and appointment trend</CardTitle><p className="text-sm text-muted-foreground">Monthly revenue with appointment volume.</p></CardHeader>
@@ -42,7 +40,7 @@ export function ReportsDashboard({ planTier, usage, activity, monthlyRevenue, se
             <CardContent className="h-80"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={statusMix} dataKey="value" nameKey="name" innerRadius={62} outerRadius={104} paddingAngle={4}>{statusMix.map((entry, index) => <Cell key={entry.name} fill={colors[index % colors.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent>
           </Card>
         </div>
-      ) : <LockedCard title="Charts require Pro" message="Upgrade to Pro to unlock chart-based revenue, appointment, and service performance reports." />}
+      ) : <LockedCard title="Charts require Reports add-on" message={usage.reason || activity.reason || "Add Usage reports to unlock chart-based revenue, appointment, and service performance reports."} />}
 
       {usage.allowed ? (
         <div className="grid gap-5 lg:grid-cols-2">
@@ -51,7 +49,7 @@ export function ReportsDashboard({ planTier, usage, activity, monthlyRevenue, se
         </div>
       ) : <LockedCard title="Usage report locked" message={usage.reason || "Usage report depth is not enabled for this plan or role."} />}
 
-      {isEnterprise && activity.allowed ? (
+      {activity.allowed ? (
         <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr_1fr]">
           <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card"><CardHeader><CardTitle className="flex items-center gap-2"><Gauge className="size-5" /> Executive control panel</CardTitle></CardHeader><CardContent className="grid gap-4 text-sm"><div className="rounded-lg border border-border bg-background/70 p-4"><p className="text-muted-foreground">Average ticket</p><p className="text-2xl font-bold">{kpis.avgTicket}</p></div><div className="rounded-lg border border-border bg-background/70 p-4"><p className="text-muted-foreground">Completion rate</p><p className="text-2xl font-bold">{kpis.completionRate}</p></div><div className="rounded-lg border border-border bg-background/70 p-4"><p className="text-muted-foreground">Active services</p><p className="text-2xl font-bold">{kpis.activeServices}</p></div></CardContent></Card>
           <Card><CardHeader><CardTitle className="flex items-center gap-2"><Target className="size-5" /> Service portfolio matrix</CardTitle></CardHeader><CardContent className="grid grid-cols-2 gap-3 md:grid-cols-3">{serviceDemand.slice(0, 6).map((service, index) => <div key={service.name} className="rounded-lg border border-border p-3" style={{ backgroundColor: `${colors[index % colors.length]}18` }}><p className="truncate text-sm font-medium">{service.name}</p><p className="mt-2 text-2xl font-bold">{service.bookings}</p><p className="text-xs text-muted-foreground">AED {service.revenue.toFixed(0)}</p></div>)}</CardContent></Card>

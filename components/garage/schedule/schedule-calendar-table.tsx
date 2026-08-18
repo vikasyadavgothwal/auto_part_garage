@@ -35,16 +35,30 @@ function EmptySlot() {
   )
 }
 
+function ClosedSlot() {
+  return (
+    <button
+      type="button"
+      className="flex min-h-[80px] w-full cursor-default items-center justify-center rounded-lg border border-destructive/40 bg-destructive/10 text-xs font-semibold uppercase tracking-wide text-destructive"
+      disabled
+    >
+      Close
+    </button>
+  )
+}
+
 type ScheduleCalendarTableProps = {
   days: SchedulePageData["days"]
   timeSlots: SchedulePageData["timeSlots"]
   appointments: SchedulePageData["appointments"]
+  dayAvailability: SchedulePageData["dayAvailability"]
 }
 
 export function ScheduleCalendarTable({
   days,
   timeSlots,
   appointments,
+  dayAvailability,
 }: ScheduleCalendarTableProps) {
   return (
     <Card className="surface-card min-w-0 overflow-hidden py-0">
@@ -55,14 +69,19 @@ export function ScheduleCalendarTable({
               <th className="sticky left-0 bg-background p-4 text-left text-sm font-semibold text-brand-muted">
                 Time
               </th>
-              {days.map((day) => (
-                <th
-                  key={day}
-                  className="min-w-[150px] bg-background p-4 text-center text-sm font-semibold text-foreground"
-                >
-                  {day}
-                </th>
-              ))}
+                {days.map((day) => (
+                  <th
+                    key={day}
+                    className="min-w-[150px] bg-background p-4 text-center text-sm font-semibold text-foreground"
+                  >
+                    <span>{day}</span>
+                    {dayAvailability[day] === false ? (
+                      <span className="mt-1 block text-xs font-medium uppercase tracking-wide text-destructive">
+                        Close
+                      </span>
+                    ) : null}
+                  </th>
+                ))}
             </tr>
           </thead>
 
@@ -78,6 +97,7 @@ export function ScheduleCalendarTable({
 
                 {days.map((day) => {
                   const slot = appointments[time]?.[day]
+                  const isOpen = dayAvailability[day] ?? true
 
                   return (
                     <td key={`${time}-${day}`} className="p-2 align-top">
@@ -87,8 +107,10 @@ export function ScheduleCalendarTable({
                           service={slot.service}
                           duration={slot.duration}
                         />
-                      ) : (
+                      ) : isOpen ? (
                         <EmptySlot />
+                      ) : (
+                        <ClosedSlot />
                       )}
                     </td>
                   )

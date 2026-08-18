@@ -2,6 +2,7 @@ import { cookies } from "next/headers"
 
 import { requestBackend } from "@/lib/auth/backend"
 import { reviewsPageData, type ReviewsPageData } from "@/lib/garage-page-data"
+import { tablePageSize, type PaginationMeta } from "@/lib/pagination"
 
 export type GarageServiceReviewRecord = {
   id: string
@@ -22,6 +23,7 @@ export type GarageServiceReviewRecord = {
 type ReviewsPayload = {
   ok: boolean
   reviews?: GarageServiceReviewRecord[]
+  pagination?: PaginationMeta
 }
 
 const formatDate = (value: string) =>
@@ -37,7 +39,7 @@ const statusClass = (hasReply: boolean) =>
     : "border-brand-warning/20 bg-brand-warning/10 text-brand-warning hover:bg-brand-warning/10"
 
 export async function getGarageReviews() {
-  const response = await requestBackend("/api/v1/garage/reviews", {
+  const response = await requestBackend("/api/v1/garage/reviews?all=1", {
     cookieHeader: (await cookies()).toString(),
   })
 
@@ -45,6 +47,30 @@ export async function getGarageReviews() {
 
   const payload = (await response.json()) as ReviewsPayload
   return payload.reviews ?? []
+}
+
+export async function getGarageReviewsPage(page: number) {
+  const response = await requestBackend(
+    `/api/v1/garage/reviews?page=${page}&pageSize=${tablePageSize}`,
+    {
+      cookieHeader: (await cookies()).toString(),
+    },
+  )
+
+  if (!response.ok) {
+    return {
+      reviews: [],
+      pagination: { page, pageSize: tablePageSize, total: 0, totalPages: 1 },
+    }
+  }
+
+  const payload = (await response.json()) as ReviewsPayload
+  return {
+    reviews: payload.reviews ?? [],
+    pagination:
+      payload.pagination ??
+      { page, pageSize: tablePageSize, total: 0, totalPages: 1 },
+  }
 }
 
 export function buildReviewsPageData(

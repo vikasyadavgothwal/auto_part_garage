@@ -29,15 +29,18 @@ import {
   tableHeaderRowClass,
   tableRowClass,
 } from "@/components/garage/shared/table-styles"
+import { TablePagination } from "@/components/garage/shared/table-pagination"
 import { authenticatedFetch } from "@/lib/auth/client"
 import type {
   GarageServiceReview,
   GarageServiceTableItem,
 } from "@/lib/garage-services"
+import type { PaginationMeta } from "@/lib/pagination"
 import { appPath } from "@/lib/routes"
 
 type ServicesTableProps = {
   services: GarageServiceTableItem[]
+  pagination: PaginationMeta
   deletingId?: string | null
   onEdit?: (service: GarageServiceTableItem) => void
   onDelete?: (service: GarageServiceTableItem) => void
@@ -49,6 +52,7 @@ type ServicesTableProps = {
 
 export function ServicesTable({
   services,
+  pagination,
   deletingId,
   onEdit,
   onDelete,
@@ -59,7 +63,7 @@ export function ServicesTable({
   const [selectedReview, setSelectedReview] =
     useState<GarageServiceReview | null>(null)
   const [reply, setReply] = useState("")
-  const [error, setError] = useState("")
+  const [, setError] = useState("")
   const [isPending, startTransition] = useTransition()
 
   const openReviews = (service: GarageServiceTableItem) => {
@@ -265,6 +269,7 @@ export function ServicesTable({
             </TableBody>
           </Table>
         </div>
+        <TablePagination pagination={pagination} />
       </Card>
 
       <Dialog
@@ -350,14 +355,10 @@ export function ServicesTable({
                     value={reply}
                     onChange={(event) => setReply(event.target.value)}
                     maxLength={1000}
+                    required
                     className="min-h-32 w-full rounded-lg border border-border bg-brand-panel px-3 py-2 text-sm outline-none focus:border-primary"
                   />
 
-                  {error ? (
-                    <p className="text-sm font-medium text-destructive">
-                      {error}
-                    </p>
-                  ) : null}
 
                   <DialogFooter className="mx-0 mb-0 rounded-none border-0 bg-transparent p-0">
                     <Button

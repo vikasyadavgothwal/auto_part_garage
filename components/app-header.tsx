@@ -42,6 +42,7 @@ export function DashboardHeader({ user }: { user: DashboardUser }) {
             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-muted" />
             <Input
               type="text"
+              maxLength={100}
               placeholder="Search..."
               className="h-10 w-full rounded-sm border border-border bg-brand-surface pl-10 pr-4 text-foreground placeholder:text-brand-muted focus-visible:border-primary focus-visible:ring-0"
             />

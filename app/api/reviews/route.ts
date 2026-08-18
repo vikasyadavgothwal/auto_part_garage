@@ -5,7 +5,7 @@ import { applySetCookieHeaders, getSetCookieHeaders, requestBackend } from "@/li
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
-  const backend = await requestBackend("/api/v1/garage/reviews", {
+  const backend = await requestBackend(`/api/v1/garage/reviews${request.nextUrl.search}`, {
     cookieHeader: request.headers.get("cookie"),
     userAgent: request.headers.get("user-agent"),
   })

@@ -62,6 +62,7 @@ export type SchedulePageData = {
     value: string
   }>
   days: string[]
+  dayAvailability: Record<string, boolean>
   timeSlots: string[]
   appointments: Record<string, Partial<Record<string, ScheduleAppointment>>>
   upcomingToday: Array<{
@@ -300,6 +301,15 @@ export const schedulePageData: SchedulePageData = {
     { label: "Today", value: "2 bookings" },
     { label: "Available Slots", value: "64" },
   ],
+  dayAvailability: {
+    Monday: true,
+    Tuesday: true,
+    Wednesday: true,
+    Thursday: true,
+    Friday: true,
+    Saturday: true,
+    Sunday: true,
+  },
   days: [
     "Monday",
     "Tuesday",
