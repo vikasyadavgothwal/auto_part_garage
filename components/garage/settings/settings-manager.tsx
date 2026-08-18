@@ -271,6 +271,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     setMobileCountryCode(countryCode)
     setMobileLocalNumber(digits)
     setField("mobile", buildMobileNumber(countryCode, digits))
+    setMobileVerificationId("")
+    setOtp("")
   }
 
   const toggleWorkingDay = (day: string) => {
@@ -460,6 +462,15 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       toast.error(validationError)
       return
     }
+    if (
+      normalizeMobileValue(form.mobile) !==
+      normalizeMobileValue(currentProfile.mobile ?? "")
+    ) {
+      const errorMessage = "Verify the mobile number with OTP before saving"
+      setError(errorMessage)
+      toast.error(errorMessage)
+      return
+    }
     setIsSaving(true)
 
     try {
@@ -569,6 +580,12 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
   const verifyMobileOtp = async () => {
     setError("")
+    if (!/^\d{6}$/.test(otp)) {
+      const errorMessage = "Enter the 6-digit OTP"
+      setError(errorMessage)
+      toast.error(errorMessage)
+      return
+    }
     setIsVerifyingOtp(true)
 
     try {
@@ -842,13 +859,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                   className="gap-2"
                 >
                   <MessageSquareText className="size-4" />
-                  {isSendingOtp
-                    ? mobileNeedsSaveBeforeOtp
-                      ? "Saving..."
-                      : "Sending..."
-                    : mobileNeedsSaveBeforeOtp
-                      ? "Save & Send OTP"
-                      : "Send OTP"}
+                  {isSendingOtp ? "Sending..." : "Send OTP"}
                 </Button>
                 <Input
                   value={otp}
@@ -862,7 +873,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                   type="button"
                   variant="outline"
                   onClick={verifyMobileOtp}
-                  disabled={isVerifyingOtp || !otp.trim()}
+                  disabled={isVerifyingOtp || !/^\d{6}$/.test(otp)}
                   className="gap-2"
                 >
                   <CheckCircle2 className="size-4" />
@@ -1321,7 +1332,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
           <div className="md:col-span-2">
             <Button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || mobileNeedsSaveBeforeOtp}
               className="gap-2 bg-primary text-primary-foreground hover:bg-brand-primary-hover"
             >
               <Save className="size-4" />
