@@ -24,9 +24,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { authenticatedFetch } from "@/lib/auth/client"
 import {
+  ensureFirebaseAuthConfigured,
   getFirebaseAuthDiagnostics,
   getFirebaseAuth,
-  isFirebaseAuthConfigured,
 } from "@/lib/auth/firebase-client"
 import {
   formFromProfile,
@@ -522,7 +522,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     try {
       const normalizedFormMobile = normalizeMobileValue(form.mobile)
 
-      if (!isFirebaseAuthConfigured()) {
+      if (!(await ensureFirebaseAuthConfigured())) {
         throw new Error("Firebase phone authentication is not configured")
       }
 
@@ -575,7 +575,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       if (!mobileVerificationId) {
         throw new Error("Send OTP first")
       }
-      if (!isFirebaseAuthConfigured()) {
+      if (!(await ensureFirebaseAuthConfigured())) {
         throw new Error("Firebase phone authentication is not configured")
       }
       const auth = getFirebaseAuth()
