@@ -11,10 +11,24 @@ export async function POST(request: NextRequest) {
     body: await request.formData(),
     userAgent: request.headers.get("user-agent"),
   })
-  const response = new NextResponse(await backend.text(), {
+  const contentType = backend.headers.get("content-type") ?? ""
+  const body = await backend.text()
+  const responseBody =
+    contentType.includes("application/json")
+      ? body
+      : JSON.stringify({
+          ok: false,
+          message:
+            backend.status === 413
+              ? "Upload is too large. Select up to 10 MB of images at once."
+              : "Garage image server returned an invalid response.",
+        })
+  const response = new NextResponse(responseBody, {
     status: backend.status,
     headers: {
-      "content-type": backend.headers.get("content-type") ?? "application/json",
+      "content-type": contentType.includes("application/json")
+        ? contentType
+        : "application/json",
     },
   })
   applySetCookieHeaders(response, getSetCookieHeaders(backend.headers))

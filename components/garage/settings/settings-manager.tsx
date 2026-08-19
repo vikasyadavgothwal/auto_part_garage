@@ -67,6 +67,7 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 const PLACE_PATTERN = /^[A-Za-z][A-Za-z\s'.-]*$/
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const MAX_IMAGE_UPLOAD_BATCH_SIZE = 10 * 1024 * 1024
 const MAX_GALLERY_UPLOADS = 12
 const MAX_GALLERY_IMAGES_TOTAL = 20
 const MAX_GARAGE_NAME_LENGTH = 160
@@ -107,6 +108,9 @@ const normalizeDigits = (value: string, maxLength = 14) =>
 
 const normalizeLimitedText = (value: string, maxLength: number) =>
   value.slice(0, maxLength)
+
+const imageUploadTooLargeMessage =
+  "Upload is too large. Select up to 10 MB of images at once."
 
 const normalizePlaceText = (value: string) =>
   value.replace(/[^A-Za-z\s'.-]/g, "").slice(0, MAX_PLACE_LENGTH)
@@ -411,9 +415,13 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
         method: "POST",
         body: formData,
       })
-      const payload = (await response.json()) as UploadPayload
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.message || "Unable to upload images")
+      const payload = (await response.json().catch(() => null)) as UploadPayload | null
+      if (!response.ok || !payload?.ok) {
+        throw new Error(
+          response.status === 413
+            ? imageUploadTooLargeMessage
+            : payload?.message || "Unable to upload images",
+        )
       }
 
       const nextForm: GarageProfileFormValues = {
@@ -652,6 +660,15 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     if (invalidFile) {
       setError("Images must be JPG, PNG, or WebP and no larger than 5 MB each")
       toast.error("Images must be JPG, PNG, or WebP and no larger than 5 MB each")
+      return
+    }
+    const pendingUploadSize =
+      (isGarageImage ? selectedFiles[0]?.size ?? 0 : pendingGarageImage?.file.size ?? 0) +
+      pendingGalleryImages.reduce((total, image) => total + image.file.size, 0) +
+      (isGarageImage ? 0 : selectedFiles.reduce((total, file) => total + file.size, 0))
+    if (pendingUploadSize > MAX_IMAGE_UPLOAD_BATCH_SIZE) {
+      setError(imageUploadTooLargeMessage)
+      toast.error(imageUploadTooLargeMessage)
       return
     }
     if (isGarageImage) {
@@ -1257,7 +1274,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                     Workshop gallery
                   </p>
                   <p className="text-xs text-brand-muted">
-                    Select up to {MAX_GALLERY_UPLOADS} images at once. Save settings to upload.
+                    Select up to {MAX_GALLERY_UPLOADS} images and 10 MB at once. Save settings to upload.
                   </p>
                 </div>
                 <Button asChild type="button" variant="outline" className="gap-2">
