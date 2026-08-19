@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { MoreHorizontal } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -207,6 +208,7 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
       setCompletionOtp("")
       setCancellationReason("")
       setOtpMessage("")
+      toast.success(`Booking ${booking.id} marked ${formatStatus(status).toLowerCase()}.`)
       router.refresh()
     })
   }
@@ -415,7 +417,7 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
           ) ? (
             <div className="space-y-3 rounded-lg border border-border/70 p-3">
               <div className="space-y-1">
-                <Label htmlFor="completion-otp">Customer completion OTP</Label>
+                <Label htmlFor="completion-otp">Customer completion OTP <span className="text-destructive">*</span></Label>
                 <p className="text-xs text-muted-foreground">
                   Send an OTP to the customer email and enter it here after the
                   customer confirms the service is complete.
@@ -452,7 +454,7 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
 
           {pendingStatusChange?.status === "cancelled" ? (
             <div className="space-y-2 rounded-lg border border-border/70 p-3">
-              <Label htmlFor="cancellation-reason">Cancellation reason</Label>
+              <Label htmlFor="cancellation-reason">Cancellation reason <span className="text-destructive">*</span></Label>
               <textarea
                 id="cancellation-reason"
                 value={cancellationReason}

@@ -359,7 +359,7 @@ export function OfflineAppointmentDialog({
               </div>
 
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="offline-time">Time</Label>
+                <Label htmlFor="offline-time">Time <span className="text-destructive">*</span></Label>
                 <div
                   id="offline-time"
                   className="space-y-3 rounded-lg border border-border/70 bg-brand-surface p-3"

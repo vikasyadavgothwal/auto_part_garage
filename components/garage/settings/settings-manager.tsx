@@ -1044,7 +1044,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor={`${day}-open`} className="text-xs">
-                      Open
+                      Open <span className="text-destructive">*</span>
                     </Label>
                     <select
                       id={`${day}-open`}
@@ -1064,7 +1064,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor={`${day}-close`} className="text-xs">
-                      Close
+                      Close <span className="text-destructive">*</span>
                     </Label>
                     <select
                       id={`${day}-close`}
@@ -1150,7 +1150,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="address">Address</Label>
+            <Label htmlFor="address">Address <span className="text-destructive">*</span></Label>
             <textarea
               id="address"
               value={form.address}
@@ -1164,7 +1164,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
+            <Label htmlFor="country">Country <span className="text-destructive">*</span></Label>
             <Input
               id="country"
               value={form.country}
@@ -1177,7 +1177,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="state">State</Label>
+            <Label htmlFor="state">State <span className="text-destructive">*</span></Label>
             <Input
               id="state"
               value={form.state}
@@ -1190,7 +1190,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
+            <Label htmlFor="city">City <span className="text-destructive">*</span></Label>
             <Input
               id="city"
               value={form.city}
@@ -1255,7 +1255,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="about">About paragraph</Label>
+            <Label htmlFor="about">About paragraph <span className="text-destructive">*</span></Label>
             <textarea
               id="about"
               value={form.about}
