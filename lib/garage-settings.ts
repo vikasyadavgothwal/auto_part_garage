@@ -15,7 +15,6 @@ export type GarageProfileRecord = {
   country: string | null
   state: string | null
   city: string | null
-  pincode: string | null
   jobCompletedNumber: number
   yearsExperience: number
   responseTime: string | null
@@ -46,7 +45,6 @@ export type GarageProfileFormValues = {
   country: string
   state: string
   city: string
-  pincode: string
   jobCompletedNumber: number
   yearsExperience: number
   responseTime: string
@@ -83,7 +81,6 @@ export const emptyGarageProfile: GarageProfileRecord = {
   country: null,
   state: null,
   city: null,
-  pincode: null,
   jobCompletedNumber: 0,
   yearsExperience: 0,
   responseTime: null,
@@ -110,7 +107,6 @@ export const formFromProfile = (
   country: profile.country ?? "",
   state: profile.state ?? "",
   city: profile.city ?? "",
-  pincode: profile.pincode ?? "",
   jobCompletedNumber: profile.jobCompletedNumber,
   yearsExperience: profile.yearsExperience,
   responseTime: profile.responseTime ?? "",

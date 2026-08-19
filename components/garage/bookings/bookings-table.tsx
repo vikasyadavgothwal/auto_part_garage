@@ -57,7 +57,6 @@ type PendingStatusChange = {
 }
 
 const statusOptions: Array<{ label: string; value: BookingStatus }> = [
-  { label: "Mark pending", value: "pending" },
   { label: "Mark confirmed", value: "confirmed" },
   { label: "Mark completed", value: "completed" },
   { label: "Mark cancelled", value: "cancelled" },
@@ -103,6 +102,7 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
     useState<PendingStatusChange | null>(null)
   const [statusError, setStatusError] = useState("")
   const [completionOtp, setCompletionOtp] = useState("")
+  const [cancellationReason, setCancellationReason] = useState("")
   const [otpMessage, setOtpMessage] = useState("")
   const [isPending, startTransition] = useTransition()
 
@@ -110,6 +110,7 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
     setPendingStatusChange({ booking, status })
     setStatusError("")
     setCompletionOtp("")
+    setCancellationReason("")
     setOtpMessage("")
 
     if (requiresCompletionOtp(booking, status)) {
@@ -122,6 +123,7 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
     setPendingStatusChange(null)
     setStatusError("")
     setCompletionOtp("")
+    setCancellationReason("")
     setOtpMessage("")
   }
 
@@ -165,6 +167,18 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
       return
     }
 
+    if (status === "cancelled") {
+      const reason = cancellationReason.trim()
+      if (reason.length < 10) {
+        setStatusError("Enter a cancellation reason with at least 10 characters")
+        return
+      }
+      if (reason.length > 500) {
+        setStatusError("Cancellation reason must be 500 characters or fewer")
+        return
+      }
+    }
+
     startTransition(async () => {
       const response = await fetch(appPath(`/api/bookings/${booking.backendId}`), {
         method: "PATCH",
@@ -173,6 +187,9 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
           status,
           ...(requiresCompletionOtp(booking, status)
             ? { completionOtp: completionOtp.trim() }
+            : {}),
+          ...(status === "cancelled"
+            ? { cancellationReason: cancellationReason.trim() }
             : {}),
         }),
       })
@@ -188,6 +205,7 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
       setPendingStatusChange(null)
       setStatusError("")
       setCompletionOtp("")
+      setCancellationReason("")
       setOtpMessage("")
       router.refresh()
     })
@@ -338,6 +356,14 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
               <div className="sm:col-span-2">
                 <DetailRow label="Notes" value={selectedBooking.notes} />
               </div>
+              {selectedBooking.cancellationReason ? (
+                <div className="sm:col-span-2">
+                  <DetailRow
+                    label="Cancellation reason"
+                    value={selectedBooking.cancellationReason}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
         </DialogContent>
@@ -421,6 +447,25 @@ export function BookingsTable({ bookings, pagination }: BookingsTableProps) {
                   {otpMessage}
                 </p>
               ) : null}
+            </div>
+          ) : null}
+
+          {pendingStatusChange?.status === "cancelled" ? (
+            <div className="space-y-2 rounded-lg border border-border/70 p-3">
+              <Label htmlFor="cancellation-reason">Cancellation reason</Label>
+              <textarea
+                id="cancellation-reason"
+                value={cancellationReason}
+                maxLength={500}
+                placeholder="Explain why this booking is being cancelled"
+                onChange={(event) =>
+                  setCancellationReason(event.target.value.slice(0, 500))
+                }
+                className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground">
+                Required, 10-500 characters.
+              </p>
             </div>
           ) : null}
 

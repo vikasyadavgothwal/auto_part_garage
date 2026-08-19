@@ -25,6 +25,7 @@ export type GarageBookingRecord = {
   vehicleModel: string | null
   vehicleVin: string | null
   notes: string | null
+  cancellationReason: string | null
   bookingDate: string | null
   bookingTime: string | null
   durationMinutes: number
@@ -47,10 +48,13 @@ const statusClass = (status: GarageBookingRecord["status"]) => {
     return "border-brand-warning/20 bg-brand-warning/10 text-brand-warning hover:bg-brand-warning/10"
   }
   if (status === "cancelled") {
-    return "border-primary/20 bg-primary/10 text-primary hover:bg-primary/10"
+    return "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/10"
   }
   if (status === "pending_slot_selection") {
     return "border-brand-warning/20 bg-brand-warning/10 text-brand-warning hover:bg-brand-warning/10"
+  }
+  if (status === "confirmed") {
+    return "border-sky-500/20 bg-sky-500/10 text-sky-700 hover:bg-sky-500/10"
   }
   return "border-brand-success/20 bg-brand-success/10 text-brand-success hover:bg-brand-success/10"
 }
@@ -238,6 +242,7 @@ export function buildBookingsPageData(
       service: booking.serviceName,
       duration: `${booking.durationMinutes} min`,
       notes: booking.notes,
+      cancellationReason: booking.cancellationReason,
       revenue: formatMoney(booking.price, booking.currency),
       status: titleCase(booking.status),
       rawStatus: booking.status,

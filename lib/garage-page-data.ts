@@ -99,6 +99,7 @@ export type BookingsPageData = {
     service: string
     duration?: string
     notes?: string | null
+    cancellationReason?: string | null
     revenue: string
     status: string
     rawStatus?:

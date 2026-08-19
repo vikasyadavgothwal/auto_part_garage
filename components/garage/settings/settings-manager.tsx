@@ -78,8 +78,7 @@ const MAX_JOBS_COMPLETED_LENGTH = 6
 const MAX_YEARS_EXPERIENCE_LENGTH = 3
 const MAX_ADDRESS_LENGTH = 500
 const MAX_PLACE_LENGTH = 80
-const MAX_PINCODE_LENGTH = 12
-const MAX_CERTIFICATION_LENGTH = 160
+const MAX_CERTIFICATION_LENGTH = 80
 const MAX_ABOUT_LENGTH = 1000
 const MOBILE_COUNTRY_CODES = [
   { code: "+971", label: "UAE" },
@@ -373,9 +372,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
         return `${label} must be ${MAX_PLACE_LENGTH} characters or fewer`
       }
     }
-    if (form.pincode && !/^\d{1,12}$/.test(form.pincode)) {
-      return `Pincode must be ${MAX_PINCODE_LENGTH} digits or fewer`
-    }
     if (form.jobCompletedNumber < 0 || !Number.isInteger(form.jobCompletedNumber)) {
       return "Job completed number must be a whole number"
     }
@@ -391,8 +387,15 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     if (form.certifications.some((name) => !name.trim())) {
       return "Certification names cannot be empty"
     }
-    if (form.certifications.some((name) => name.trim().length > 160)) {
-      return "Certification names must be 160 characters or fewer"
+    if (form.certifications.some((name) => name.trim().length > MAX_CERTIFICATION_LENGTH)) {
+      return `Certification names must be ${MAX_CERTIFICATION_LENGTH} characters or fewer`
+    }
+    if (
+      form.certifications.some(
+        (name) => !/^[A-Za-z0-9][A-Za-z0-9\s&().,+/-]*$/.test(name.trim()),
+      )
+    ) {
+      return "Certification can only include letters, numbers, spaces, and common punctuation"
     }
     for (const day of form.workingDays) {
       const hours = form.workingHoursByDay[day]
@@ -748,6 +751,11 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     if (name.length > MAX_CERTIFICATION_LENGTH) {
       setError(`Certification names must be ${MAX_CERTIFICATION_LENGTH} characters or fewer`)
       toast.error(`Certification names must be ${MAX_CERTIFICATION_LENGTH} characters or fewer`)
+      return
+    }
+    if (!/^[A-Za-z0-9][A-Za-z0-9\s&().,+/-]*$/.test(name)) {
+      setError("Certification can only include letters, numbers, spaces, and common punctuation")
+      toast.error("Certification can only include letters, numbers, spaces, and common punctuation")
       return
     }
     if (form.certifications.some((item) => item.toLowerCase() === name.toLowerCase())) {
@@ -1192,26 +1200,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               autoComplete="address-level2"
               className="h-11 border-border bg-brand-surface"
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="pincode">Pincode</Label>
-            <Input
-              id="pincode"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={form.pincode}
-              onChange={(event) =>
-                setField("pincode", normalizeNumberText(event.target.value, MAX_PINCODE_LENGTH))
-              }
-              maxLength={MAX_PINCODE_LENGTH}
-              placeholder={`Up to ${MAX_PINCODE_LENGTH} digits`}
-              title={`Enter up to ${MAX_PINCODE_LENGTH} digits`}
-              className="h-11 border-border bg-brand-surface"
-            />
-            <p className="text-xs text-brand-muted">
-              Numbers only, maximum {MAX_PINCODE_LENGTH} digits.
-            </p>
           </div>
 
           <div className="space-y-2 md:col-span-2">
