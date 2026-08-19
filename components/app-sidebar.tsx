@@ -50,11 +50,13 @@ const fallbackMenuKeys = items.map((item) => item.menuKey)
 const fallbackMenuKeysWithoutApiAccess = fallbackMenuKeys.filter((menuKey) => menuKey !== "api-keys")
 
 export function AppSidebar({
+  branding,
   visibleMenus = [],
   planName,
   planCode,
   isOwner = false,
 }: {
+  branding?: { siteName: string; logoUrl: string }
   visibleMenus?: string[]
   planName?: string | null
   planCode?: string | null
@@ -69,7 +71,10 @@ export function AppSidebar({
     <Sidebar className="border-sidebar-border bg-brand-panel text-foreground">
       <SidebarHeader className="border-b border-border px-6 py-6">
         <Link href={appRoutes.overview} className="block">
-          <h2 className="text-xl font-bold">AutoPartsPro</h2>
+          {branding?.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={branding.logoUrl} alt={branding.siteName} className="h-10 max-w-[190px] object-contain object-left" />
+          ) : <h2 className="text-xl font-bold">{branding?.siteName === "AutoPartsPro" || branding?.siteName === "AutoParts Pro" || !branding?.siteName ? <>AutoParts<span className="text-primary"> Pro</span></> : branding.siteName}</h2>}
           <p className="mt-1 text-sm text-muted-foreground">
             Garage
           </p>

@@ -6,6 +6,7 @@ import { DashboardHeader } from "@/components/app-header"
 import { SessionKeepalive } from "@/components/auth/session-keepalive"
 import { requireGarageUser } from "@/lib/auth/server"
 import { requestBackend } from "@/lib/auth/backend"
+import { getSiteBranding } from "@/lib/site-branding"
 
 type BusinessAccessPayload = {
   ok: boolean
@@ -47,12 +48,12 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode
 }) {
-  const [user, businessAccess] = await Promise.all([requireGarageUser(), getBusinessAccess()])
+  const [user, businessAccess, branding] = await Promise.all([requireGarageUser(), getBusinessAccess(), getSiteBranding()])
 
   return (
     <SidebarProvider>
       <SessionKeepalive />
-      <AppSidebar visibleMenus={businessAccess.visibleMenus} planName={businessAccess.planName} planCode={businessAccess.planCode} isOwner={businessAccess.isOwner} />
+      <AppSidebar branding={branding} visibleMenus={businessAccess.visibleMenus} planName={businessAccess.planName} planCode={businessAccess.planCode} isOwner={businessAccess.isOwner} />
       <SidebarInset className="min-h-svh min-w-0 bg-brand-surface">
         <DashboardHeader user={user} />
         <div className="flex min-w-0 flex-1 flex-col p-4 lg:p-6">

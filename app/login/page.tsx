@@ -1,5 +1,6 @@
 import { LoginForm } from "@/components/auth/login"
+import { getSiteBranding } from "@/lib/site-branding"
 
-export default function LoginPage() {
-  return <LoginForm />
+export default async function LoginPage() {
+  return <LoginForm branding={await getSiteBranding()} />
 }
