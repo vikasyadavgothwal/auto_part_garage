@@ -66,7 +66,7 @@ const MOBILE_PATTERN = /^\+\d{8,18}$/
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 const PLACE_PATTERN = /^[A-Za-z][A-Za-z\s'.-]*$/
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024
 const MAX_IMAGE_UPLOAD_BATCH_SIZE = 10 * 1024 * 1024
 const MAX_GALLERY_UPLOADS = 12
 const MAX_GALLERY_IMAGES_TOTAL = 20
@@ -111,6 +111,18 @@ const normalizeLimitedText = (value: string, maxLength: number) =>
 
 const imageUploadTooLargeMessage =
   "Upload is too large. Select up to 10 MB of images at once."
+
+const formatFileSize = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+
+const imageUploadTooLargeMessageFor = (bytes: number) =>
+  `Queued upload is ${formatFileSize(bytes)}. Select up to 10 MB of images at once, or remove some selected images below.`
+
+const imageUploadSize = (
+  garageImage: PendingImage | null,
+  galleryImages: PendingImage[],
+) =>
+  (garageImage?.file.size ?? 0) +
+  galleryImages.reduce((total, image) => total + image.file.size, 0)
 
 const normalizePlaceText = (value: string) =>
   value.replace(/[^A-Za-z\s'.-]/g, "").slice(0, MAX_PLACE_LENGTH)
@@ -398,6 +410,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     values: GarageProfileFormValues,
   ): Promise<GarageProfileFormValues> => {
     if (!pendingGarageImage && pendingGalleryImages.length === 0) return values
+    const pendingUploadSize = imageUploadSize(pendingGarageImage, pendingGalleryImages)
+    if (pendingUploadSize > MAX_IMAGE_UPLOAD_BATCH_SIZE) {
+      throw new Error(imageUploadTooLargeMessageFor(pendingUploadSize))
+    }
 
     setIsUploadingGarageImage(Boolean(pendingGarageImage))
     setIsUploadingGallery(pendingGalleryImages.length > 0)
@@ -658,31 +674,40 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       (file) => !ACCEPTED_IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_SIZE,
     )
     if (invalidFile) {
-      setError("Images must be JPG, PNG, or WebP and no larger than 5 MB each")
-      toast.error("Images must be JPG, PNG, or WebP and no larger than 5 MB each")
+      setError("Images must be JPG, PNG, or WebP and no larger than 10 MB each")
+      toast.error("Images must be JPG, PNG, or WebP and no larger than 10 MB each")
       return
     }
-    const pendingUploadSize =
-      (isGarageImage ? selectedFiles[0]?.size ?? 0 : pendingGarageImage?.file.size ?? 0) +
-      pendingGalleryImages.reduce((total, image) => total + image.file.size, 0) +
-      (isGarageImage ? 0 : selectedFiles.reduce((total, file) => total + file.size, 0))
+    const nextPendingGarageImage = isGarageImage
+      ? makePendingImage(selectedFiles[0])
+      : pendingGarageImage
+    const nextPendingGalleryImages = isGarageImage
+      ? pendingGalleryImages
+      : [...pendingGalleryImages, ...selectedFiles.map(makePendingImage)]
+    const pendingUploadSize = imageUploadSize(
+      nextPendingGarageImage,
+      nextPendingGalleryImages,
+    )
     if (pendingUploadSize > MAX_IMAGE_UPLOAD_BATCH_SIZE) {
-      setError(imageUploadTooLargeMessage)
-      toast.error(imageUploadTooLargeMessage)
+      if (isGarageImage && nextPendingGarageImage) {
+        URL.revokeObjectURL(nextPendingGarageImage.previewUrl)
+      }
+      nextPendingGalleryImages
+        .filter((image) => !pendingGalleryImages.includes(image))
+        .forEach((image) => URL.revokeObjectURL(image.previewUrl))
+      const errorMessage = imageUploadTooLargeMessageFor(pendingUploadSize)
+      setError(errorMessage)
+      toast.error(errorMessage)
       return
     }
     if (isGarageImage) {
-      const image = makePendingImage(selectedFiles[0])
       setPendingGarageImage((current) => {
         if (current) URL.revokeObjectURL(current.previewUrl)
-        return image
+        return nextPendingGarageImage
       })
       toast.success("Garage image selected. Save settings to upload it.")
     } else {
-      setPendingGalleryImages((current) => [
-        ...current,
-        ...selectedFiles.map(makePendingImage),
-      ])
+      setPendingGalleryImages(nextPendingGalleryImages)
       toast.success("Gallery images selected. Save settings to upload them.")
     }
   }
@@ -767,6 +792,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     normalizeMobileValue(form.mobile) !==
       normalizeMobileValue(currentProfile.mobile ?? "")
   const hasPendingImages = Boolean(pendingGarageImage || pendingGalleryImages.length)
+  const pendingUploadSize = imageUploadSize(pendingGarageImage, pendingGalleryImages)
 
   return (
     <form className="space-y-8" onSubmit={saveSettings}>
@@ -1274,7 +1300,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                     Workshop gallery
                   </p>
                   <p className="text-xs text-brand-muted">
-                    Select up to {MAX_GALLERY_UPLOADS} images and 10 MB at once. Save settings to upload.
+                    Each image can be up to 10 MB. Queued uploads must stay within 10 MB at once.
                   </p>
                 </div>
                 <Button asChild type="button" variant="outline" className="gap-2">
@@ -1289,7 +1315,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
               <p className="text-sm text-brand-muted">Uploading on save...</p>
             ) : pendingGalleryImages.length ? (
               <p className="text-sm text-brand-muted">
-                {pendingGalleryImages.length} gallery image{pendingGalleryImages.length === 1 ? "" : "s"} selected. Save settings to upload.
+                {pendingGalleryImages.length} gallery image{pendingGalleryImages.length === 1 ? "" : "s"} selected.
+                Queued upload: {formatFileSize(pendingUploadSize)}. Save settings to upload.
               </p>
             ) : null}
             {form.galleryImageUrls.length ? (
