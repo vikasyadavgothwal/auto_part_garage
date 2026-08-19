@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
           ok: false,
           message:
             backend.status === 413
-              ? "Upload is too large. Select up to 10 MB of images at once."
+              ? "Upload is too large. Upload up to 5 gallery images, 10 MB each."
               : "Garage image server returned an invalid response.",
         })
   const response = new NextResponse(responseBody, {

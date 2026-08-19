@@ -67,9 +67,9 @@ const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 const PLACE_PATTERN = /^[A-Za-z][A-Za-z\s'.-]*$/
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024
-const MAX_IMAGE_UPLOAD_BATCH_SIZE = 10 * 1024 * 1024
-const MAX_GALLERY_UPLOADS = 12
-const MAX_GALLERY_IMAGES_TOTAL = 20
+const MAX_GALLERY_UPLOADS = 5
+const MAX_GALLERY_IMAGES_TOTAL = 5
+const MAX_IMAGE_UPLOAD_BATCH_SIZE = (MAX_GALLERY_UPLOADS + 1) * MAX_IMAGE_SIZE
 const MAX_GARAGE_NAME_LENGTH = 160
 const MAX_EMAIL_LENGTH = 254
 const MAX_MOBILE_LOCAL_LENGTH = 14
@@ -110,12 +110,12 @@ const normalizeLimitedText = (value: string, maxLength: number) =>
   value.slice(0, maxLength)
 
 const imageUploadTooLargeMessage =
-  "Upload is too large. Select up to 10 MB of images at once."
+  "Upload is too large. Upload up to 5 gallery images, 10 MB each."
 
 const formatFileSize = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 
 const imageUploadTooLargeMessageFor = (bytes: number) =>
-  `Queued upload is ${formatFileSize(bytes)}. Select up to 10 MB of images at once, or remove some selected images below.`
+  `Queued upload is ${formatFileSize(bytes)}. Upload up to 5 gallery images, 10 MB each, or remove some selected images below.`
 
 const imageUploadSize = (
   garageImage: PendingImage | null,
@@ -1300,7 +1300,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                     Workshop gallery
                   </p>
                   <p className="text-xs text-brand-muted">
-                    Each image can be up to 10 MB. Queued uploads must stay within 10 MB at once.
+                    Select up to {MAX_GALLERY_UPLOADS} gallery images. Each image can be up to 10 MB.
                   </p>
                 </div>
                 <Button asChild type="button" variant="outline" className="gap-2">

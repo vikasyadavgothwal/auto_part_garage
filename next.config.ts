@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
   ...(basePath ? { basePath } : {}),
   experimental: {
     externalDir: true,
-    proxyClientMaxBodySize: "12mb",
+    proxyClientMaxBodySize: "70mb",
   },
   poweredByHeader: false,
   async headers() {
