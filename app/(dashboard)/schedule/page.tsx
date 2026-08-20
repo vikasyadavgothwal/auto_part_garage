@@ -2,7 +2,6 @@ import { cookies } from "next/headers"
 
 import { OfflineAppointmentDialog } from "@/components/garage/schedule/offline-appointment-dialog"
 import { ScheduleCalendarTable } from "@/components/garage/schedule/schedule-calendar-table"
-import { ScheduleLegendCard } from "@/components/garage/schedule/schedule-legend-card"
 import { ScheduleOverviewCard } from "@/components/garage/schedule/schedule-overview-card"
 import { ScheduleSettingsCard } from "@/components/garage/schedule/schedule-settings-card"
 import { UpcomingTodayCard } from "@/components/garage/schedule/upcoming-today-card"
@@ -89,7 +88,6 @@ export default async function GarageSchedulePage({
         appointments={schedulePageData.appointments}
         dayAvailability={schedulePageData.dayAvailability}
       />
-      <ScheduleLegendCard />
 
       <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2">
         <ScheduleSettingsCard />

@@ -44,7 +44,7 @@ type ActiveAddOn = { id: string; label: string; featureKey: string; status: stri
 
 type AccessPayload = { ok: boolean; access?: BusinessAccess[] }
 type PlansPayload = { ok: boolean; plans?: BusinessPlan[] }
-type PaymentTransaction = { id: string; type: string; sourceKey?: string | null; description: string; amount: number; currency: string; status: string; createdAt: string }
+type PaymentTransaction = { id: string; type: string; sourceId?: string | null; sourceKey?: string | null; description: string; amount: number; currency: string; status: string; createdAt: string; effectiveAt?: string | null; toPlanName?: string | null }
 type TransactionsPayload = { ok: boolean; transactions?: PaymentTransaction[] }
 
 const limitText = (value: number | null | undefined) => value == null ? "Unlimited" : String(value)
@@ -55,6 +55,7 @@ const apiText = (plan: BusinessPlan) => plan.apiAccessLevel === "enterprise" ? "
 const isLimitReached = (used: number | null | undefined, limit: number | null | undefined) => limit != null && used != null && used >= limit
 const toNumber = (value: number | undefined) => typeof value === "number" ? value : 0
 const dateFormatter = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", timeZone: "UTC", year: "numeric" })
+const planRank = { Free: 0, Pro: 1, Enterprise: 2 } as const
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return "Not set"
@@ -83,6 +84,7 @@ export async function PlansPage() {
   const currentPlan = access?.businessAccount.plan
   const usage = access?.businessAccount.usage
   const activeAddOns = access?.activeAddOns ?? access?.entitlements?.activeAddOns ?? []
+  const scheduledChange = transactions.find((item) => item.type === "plan" && item.status === "Scheduled")
   const usageCards = currentPlan ? [{ label: "Services", value: toNumber(usage?.services), limit: currentPlan.limits.services }, { label: "Appointments", value: toNumber(usage?.appointments), limit: currentPlan.limits.appointments }, { label: "Staff", value: toNumber(usage?.staff), limit: currentPlan.limits.staff }] : []
   const reachedLimits = usageCards.filter((item) => isLimitReached(item.value, item.limit))
 
@@ -92,6 +94,7 @@ export async function PlansPage() {
       
       {reachedLimits.length ? <p className="mt-3 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-sm text-amber-200">Usage has reached plan limits for: {reachedLimits.map((item) => item.label).join(", ")}. Ask admin for a higher plan.</p> : null}
     </section> : null}
+    {scheduledChange ? <Card className="border-amber-500/30 bg-amber-500/10"><CardContent className="pt-6"><p className="font-semibold text-amber-600">Downgrade scheduled</p><p className="mt-1 text-sm text-muted-foreground">Your current plan remains active until {formatDate(scheduledChange.effectiveAt)}. {scheduledChange.toPlanName ?? "The smaller plan"} activates automatically after that.</p></CardContent></Card> : null}
     {currentPlan?.code !== "Enterprise" ? <Card>
       <CardHeader>
         <CardTitle>Active add-ons</CardTitle>
@@ -120,7 +123,7 @@ export async function PlansPage() {
         ) : <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">No active add-ons for this account.</p>}
       </CardContent>
     </Card> : null}
-    <section className="grid gap-4 lg:grid-cols-3">{plans.map((plan) => { const isCurrent = isSamePlan(plan, currentPlan); return <div key={plan.id} className={`rounded-lg border bg-card p-5 shadow-sm ${isCurrent ? "border-primary" : "border-border"}`}><div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{plan.name}</h2><p className="mt-1 text-sm text-muted-foreground">{plan.description}</p></div>{isCurrent ? <span className="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">Current</span> : null}</div>{plan.code !== "Free" ? <div className="mt-4"><BillingPrice code={plan.code} currency={plan.price.currency} monthlyAmount={plan.price.amount} yearlyAmount={plan.price.yearlyAmount} /></div> : null}<dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-muted-foreground">Staff</dt><dd>{limitText(plan.limits.staff)}</dd></div><div><dt className="text-muted-foreground">Roles</dt><dd>{limitText(plan.limits.roles)}</dd></div><div><dt className="text-muted-foreground">Services</dt><dd>{limitText(plan.limits.services)}</dd></div><div><dt className="text-muted-foreground">Appointments</dt><dd>{limitText(plan.limits.appointments)}</dd></div><div><dt className="text-muted-foreground">Reports</dt><dd>{reportText(plan)}</dd></div><div><dt className="text-muted-foreground">Login security</dt><dd>{securityText(plan)}</dd></div><div><dt className="text-muted-foreground">Support</dt><dd>{supportText(plan)}</dd></div><div><dt className="text-muted-foreground">API access</dt><dd>{apiText(plan)}</dd></div>{plan.code !== "Free" ? <div><dt className="text-muted-foreground">Monthly days</dt><dd>{plan.price.monthlyBillingDays ?? 30}</dd></div> : null}</dl>{isCurrent ? <Button className="mt-5 w-full" variant="secondary" disabled>Current Plan</Button> : currentPlan && access ? <ChangePlanButton businessAccountId={access.businessAccount.id} currentPlanName={currentPlan.name} planId={plan.id} planName={plan.name} actionLabel={plan.code === "Free" ? "Downgrade Plan" : currentPlan.code === "Free" ? "Upgrade Plan" : "Change Plan"} /> : <Button className="mt-5 w-full" variant="secondary" disabled>Plan unavailable</Button>}</div> })}</section>
+    <section className="grid gap-4 lg:grid-cols-3">{plans.map((plan) => { const isCurrent = isSamePlan(plan, currentPlan); const isDowngrade = Boolean(currentPlan && planRank[plan.code] < planRank[currentPlan.code]); return <div key={plan.id} className={`rounded-lg border bg-card p-5 shadow-sm ${isCurrent ? "border-primary" : "border-border"}`}><div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">{plan.name}</h2><p className="mt-1 text-sm text-muted-foreground">{plan.description}</p></div>{isCurrent ? <span className="rounded-full bg-primary px-2 py-1 text-xs text-primary-foreground">Current</span> : null}</div>{plan.code !== "Free" ? <div className="mt-4"><BillingPrice code={plan.code} currency={plan.price.currency} monthlyAmount={plan.price.amount} yearlyAmount={plan.price.yearlyAmount} /></div> : null}<dl className="mt-4 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-muted-foreground">Staff</dt><dd>{limitText(plan.limits.staff)}</dd></div><div><dt className="text-muted-foreground">Roles</dt><dd>{limitText(plan.limits.roles)}</dd></div><div><dt className="text-muted-foreground">Services</dt><dd>{limitText(plan.limits.services)}</dd></div><div><dt className="text-muted-foreground">Appointments</dt><dd>{limitText(plan.limits.appointments)}</dd></div><div><dt className="text-muted-foreground">Reports</dt><dd>{reportText(plan)}</dd></div><div><dt className="text-muted-foreground">Login security</dt><dd>{securityText(plan)}</dd></div><div><dt className="text-muted-foreground">Support</dt><dd>{supportText(plan)}</dd></div><div><dt className="text-muted-foreground">API access</dt><dd>{apiText(plan)}</dd></div>{plan.code !== "Free" ? <div><dt className="text-muted-foreground">Monthly days</dt><dd>{plan.price.monthlyBillingDays ?? 30}</dd></div> : null}</dl>{isCurrent ? <Button className="mt-5 w-full" variant="secondary" disabled>Current Plan</Button> : currentPlan && access ? <ChangePlanButton businessAccountId={access.businessAccount.id} currentPlanName={currentPlan.name} planId={plan.id} planName={plan.name} isDowngrade={isDowngrade} actionLabel={isDowngrade ? "Downgrade Plan" : "Upgrade Plan"} /> : <Button className="mt-5 w-full" variant="secondary" disabled>Plan unavailable</Button>}</div> })}</section>
     <PaymentHistoryTable accountLabel="Garage" transactions={transactions} />
   </div>
 }

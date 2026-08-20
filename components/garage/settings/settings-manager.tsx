@@ -72,7 +72,6 @@ const MAX_GALLERY_IMAGES_TOTAL = 5
 const MAX_IMAGE_UPLOAD_BATCH_SIZE = (MAX_GALLERY_UPLOADS + 1) * MAX_IMAGE_SIZE
 const MAX_GARAGE_NAME_LENGTH = 160
 const MAX_EMAIL_LENGTH = 254
-const MAX_MOBILE_LOCAL_LENGTH = 14
 const MAX_RESPONSE_TIME_LENGTH = 80
 const MAX_JOBS_COMPLETED_LENGTH = 6
 const MAX_YEARS_EXPERIENCE_LENGTH = 3
@@ -81,16 +80,16 @@ const MAX_PLACE_LENGTH = 80
 const MAX_CERTIFICATION_LENGTH = 80
 const MAX_ABOUT_LENGTH = 1000
 const MOBILE_COUNTRY_CODES = [
-  { code: "+971", label: "UAE" },
-  { code: "+91", label: "India" },
-  { code: "+966", label: "Saudi Arabia" },
-  { code: "+1", label: "United States" },
-  { code: "+44", label: "United Kingdom" },
-  { code: "+974", label: "Qatar" },
-  { code: "+965", label: "Kuwait" },
-  { code: "+968", label: "Oman" },
-  { code: "+973", label: "Bahrain" },
-  { code: "+92", label: "Pakistan" },
+  { code: "+971", label: "UAE", digits: 9 },
+  { code: "+91", label: "India", digits: 10 },
+  { code: "+966", label: "Saudi Arabia", digits: 9 },
+  { code: "+1", label: "United States", digits: 10 },
+  { code: "+44", label: "United Kingdom", digits: 10 },
+  { code: "+974", label: "Qatar", digits: 8 },
+  { code: "+965", label: "Kuwait", digits: 8 },
+  { code: "+968", label: "Oman", digits: 8 },
+  { code: "+973", label: "Bahrain", digits: 8 },
+  { code: "+92", label: "Pakistan", digits: 10 },
 ] as const
 const DEFAULT_MOBILE_COUNTRY_CODE = "+971"
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
@@ -139,24 +138,30 @@ const createPendingImage = (file: File): PendingImage => ({
 const closeOptionsFor = (openTime: string) =>
   TIME_OPTIONS.filter((option) => option.value > openTime)
 
+const mobileCountryFor = (countryCode: string) =>
+  MOBILE_COUNTRY_CODES.find((country) => country.code === countryCode) ??
+  MOBILE_COUNTRY_CODES[0]
+
 const parseMobileNumber = (value: string) => {
   const compact = value.replace(/[^\d+]/g, "")
-  const countryCode =
+  const country =
     [...MOBILE_COUNTRY_CODES]
       .sort((first, second) => second.code.length - first.code.length)
-      .find((country) => compact.startsWith(country.code))?.code ??
-    DEFAULT_MOBILE_COUNTRY_CODE
+      .find((item) => compact.startsWith(item.code)) ??
+    mobileCountryFor(DEFAULT_MOBILE_COUNTRY_CODE)
+  const countryCode = country.code
   const localNumber = normalizeDigits(
     compact.startsWith(countryCode)
       ? compact.slice(countryCode.length)
       : compact.replace(/^\+/, ""),
+    country.digits,
   )
 
   return { countryCode, localNumber }
 }
 
 const buildMobileNumber = (countryCode: string, localNumber: string) => {
-  const digits = normalizeDigits(localNumber)
+  const digits = normalizeDigits(localNumber, mobileCountryFor(countryCode).digits)
   return digits ? `${countryCode}${digits}` : ""
 }
 
@@ -282,7 +287,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   }
 
   const setMobileNumber = (countryCode: string, localNumber: string) => {
-    const digits = normalizeDigits(localNumber, MAX_MOBILE_LOCAL_LENGTH)
+    const digits = normalizeDigits(localNumber, mobileCountryFor(countryCode).digits)
     setMobileCountryCode(countryCode)
     setMobileLocalNumber(digits)
     setField("mobile", buildMobileNumber(countryCode, digits))
@@ -330,17 +335,32 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   }
 
   const validateForm = () => {
-    if (form.contactEmail && !EMAIL_PATTERN.test(form.contactEmail)) {
+    if (!form.contactEmail.trim()) {
+      return "Email is required"
+    }
+    if (!EMAIL_PATTERN.test(form.contactEmail)) {
       return "Enter a valid email address"
     }
     if (form.contactEmail.length > MAX_EMAIL_LENGTH) {
       return `Email must be ${MAX_EMAIL_LENGTH} characters or fewer`
     }
-    if (form.mobile && !MOBILE_PATTERN.test(form.mobile)) {
+    if (!form.mobile.trim()) {
+      return "Mobile is required"
+    }
+    if (mobileLocalNumber.length !== mobileCountryFor(mobileCountryCode).digits) {
+      return `${mobileCountryFor(mobileCountryCode).label} mobile number must be ${mobileCountryFor(mobileCountryCode).digits} digits`
+    }
+    if (!MOBILE_PATTERN.test(form.mobile)) {
       return "Enter a valid mobile number"
+    }
+    if (!form.garageName.trim()) {
+      return "Garage name is required"
     }
     if (form.garageName && form.garageName.length > MAX_GARAGE_NAME_LENGTH) {
       return `Garage name must be ${MAX_GARAGE_NAME_LENGTH} characters or fewer`
+    }
+    if (!form.responseTime.trim()) {
+      return "Response time is required"
     }
     if (form.responseTime.length > MAX_RESPONSE_TIME_LENGTH) {
       return `Response time must be ${MAX_RESPONSE_TIME_LENGTH} characters or fewer`
@@ -821,7 +841,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
         <CardContent className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="contact-email">Email</Label>
+              <Label htmlFor="contact-email">Email <span className="text-destructive">*</span></Label>
               {emailVerified ? (
                 <Badge className="bg-brand-success/10 text-brand-success">
                   Verified
@@ -836,6 +856,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 setField("contactEmail", normalizeLimitedText(event.target.value, MAX_EMAIL_LENGTH))
               }
               maxLength={MAX_EMAIL_LENGTH}
+              required
               className="h-11 border-border bg-brand-surface"
             />
             {!emailVerified ? (
@@ -854,7 +875,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="mobile">Mobile</Label>
+              <Label htmlFor="mobile">Mobile <span className="text-destructive">*</span></Label>
               {mobileVerified ? (
                 <Badge className="bg-brand-success/10 text-brand-success">
                   Verified
@@ -888,7 +909,8 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 }
                 inputMode="numeric"
                 autoComplete="tel-national"
-                maxLength={MAX_MOBILE_LOCAL_LENGTH}
+                maxLength={mobileCountryFor(mobileCountryCode).digits}
+                required
                 placeholder="Mobile number"
                 className="h-11 min-w-0 rounded-l-none border-l-0 border-border bg-brand-surface"
               />
@@ -942,7 +964,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
         </CardHeader>
         <CardContent className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="garage-name">Garage name</Label>
+            <Label htmlFor="garage-name">Garage name <span className="text-destructive">*</span></Label>
             <Input
               id="garage-name"
               value={form.garageName}
@@ -950,13 +972,14 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 setField("garageName", normalizeLimitedText(event.target.value, MAX_GARAGE_NAME_LENGTH))
               }
               maxLength={MAX_GARAGE_NAME_LENGTH}
+              required
               placeholder="Garage display name"
               className="h-11 border-border bg-brand-surface"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="response-time">Response time</Label>
+            <Label htmlFor="response-time">Response time <span className="text-destructive">*</span></Label>
             <Input
               id="response-time"
               value={form.responseTime}
@@ -964,6 +987,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 setField("responseTime", normalizeLimitedText(event.target.value, MAX_RESPONSE_TIME_LENGTH))
               }
               maxLength={MAX_RESPONSE_TIME_LENGTH}
+              required
               placeholder="Within 30 minutes"
               className="h-11 border-border bg-brand-surface"
             />

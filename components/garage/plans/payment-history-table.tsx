@@ -16,6 +16,7 @@ type PaymentTransaction = {
   currency: string
   status: string
   createdAt: string
+  effectiveAt?: string | null
 }
 
 type PaymentHistoryTableProps = {
@@ -31,7 +32,8 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
 })
 
-const formatDate = (value: string) => {
+const formatDate = (value?: string | null) => {
+  if (!value) return "Not set"
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? "Not set" : dateFormatter.format(date)
 }
@@ -43,6 +45,11 @@ const moneyText = (amount: number, currency = "AED") =>
   })}`
 
 const typeText = (type: string) => type === "add_on" ? "Add-on" : "Plan"
+const statusClass = (status: string) => status === "Scheduled"
+  ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
+  : status === "Cancelled"
+    ? "border-muted-foreground/30 bg-muted text-muted-foreground"
+    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
 
 export function PaymentHistoryTable({ accountLabel, transactions }: PaymentHistoryTableProps) {
   const [page, setPage] = useState(1)
@@ -57,9 +64,9 @@ export function PaymentHistoryTable({ accountLabel, transactions }: PaymentHisto
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Payment history</CardTitle>
+        <CardTitle>Plan &amp; payment history</CardTitle>
         <CardDescription>
-          Paid plan upgrades and add-ons for this {accountLabel} account. Downgrades are not recorded as payments.
+          Upgrades, scheduled downgrades, applied plan changes, and add-on payments for this {accountLabel} account.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -68,7 +75,8 @@ export function PaymentHistoryTable({ accountLabel, transactions }: PaymentHisto
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Requested</TableHead>
+                  <TableHead>Effective</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Reference</TableHead>
@@ -80,12 +88,13 @@ export function PaymentHistoryTable({ accountLabel, transactions }: PaymentHisto
                 {visibleTransactions.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell>{formatDate(item.createdAt)}</TableCell>
+                    <TableCell>{formatDate(item.effectiveAt ?? item.createdAt)}</TableCell>
                     <TableCell className="font-medium whitespace-normal">{item.description}</TableCell>
                     <TableCell>{typeText(item.type)}</TableCell>
                     <TableCell className="text-muted-foreground">{item.sourceKey ?? "—"}</TableCell>
-                    <TableCell className="text-right font-semibold">{moneyText(item.amount, item.currency)}</TableCell>
+                    <TableCell className="text-right font-semibold">{item.type === "plan" && item.amount === 0 ? "—" : moneyText(item.amount, item.currency)}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-500">
+                      <Badge variant="outline" className={statusClass(item.status)}>
                         {item.status}
                       </Badge>
                     </TableCell>
@@ -110,7 +119,7 @@ export function PaymentHistoryTable({ accountLabel, transactions }: PaymentHisto
           </div>
         ) : (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No payment history yet.
+            No plan or payment history yet.
           </p>
         )}
       </CardContent>
