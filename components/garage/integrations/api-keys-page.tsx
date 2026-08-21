@@ -119,10 +119,14 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ businessAccountId: accountId, featureKey: "api.enterprise" }),
+        body: JSON.stringify({ businessAccountId: accountId, featureKey: "api.enterprise", paymentSuccessUrl: `${window.location.origin}/integrations?payment=success&session_id={CHECKOUT_SESSION_ID}`, paymentCancelUrl: `${window.location.origin}/integrations?payment=cancelled` }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || payload?.ok === false) throw new Error(payload?.message ?? "Unable to request Enterprise API access")
+      if (payload?.addOnRequest?.payment?.checkoutUrl) {
+        window.location.assign(payload.addOnRequest.payment.checkoutUrl)
+        return
+      }
       setEnterpriseRequested(true)
       toast.success("Enterprise API access request sent to Admin")
     } catch (error) {

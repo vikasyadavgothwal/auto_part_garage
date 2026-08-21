@@ -13,6 +13,7 @@ import {
   Plug,
   KeyRound,
   CirclePlus,
+  CreditCard,
   Users,
   ShieldCheck,
   BadgeCheck,
@@ -41,6 +42,7 @@ const items = [
   { title: "Integrations", url: appRoutes.integrations, icon: Plug, menuKey: "integrations" },
   { title: "API Keys", url: appRoutes.apiKeys, icon: KeyRound, menuKey: "api-keys" },
   { title: "Paid Add-ons", url: appRoutes.addOns, icon: CirclePlus, menuKey: "add-ons" },
+  { title: "Payments", url: appRoutes.payments, icon: CreditCard, menuKey: "payments" },
   { title: "Support", url: appRoutes.support, icon: Headphones, menuKey: "support" },
   { title: "Staff", url: appRoutes.staff, icon: Users, menuKey: "staff" },
   { title: "Roles", url: appRoutes.roles, icon: ShieldCheck, menuKey: "roles" },
@@ -64,7 +66,7 @@ export function AppSidebar({
 }) {
   const currentPath = stripBasePath(usePathname())
   const effectiveVisibleMenus = visibleMenus.length ? visibleMenus : isOwner || !planName ? fallbackMenuKeysWithoutApiAccess : []
-  const visibleMenuSet = new Set(["settings", ...(isOwner ? ["overview", "plans", "add-ons"] : []), ...effectiveVisibleMenus])
+  const visibleMenuSet = new Set(["settings", ...(isOwner ? ["overview", "plans", "add-ons", "payments"] : []), ...effectiveVisibleMenus])
   if (planCode === "Enterprise" || /\benterprise\b/i.test(planName ?? "")) visibleMenuSet.delete("add-ons")
 
   return (

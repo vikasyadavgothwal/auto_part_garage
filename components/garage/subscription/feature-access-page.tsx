@@ -194,9 +194,13 @@ export function GarageFeatureAccessPage({
     if (!accountId) return
     setPendingKey(featureKey)
     try {
-      const response = await fetch(appPath("/api/business/add-ons/request"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessAccountId: accountId, featureKey, note }) })
+      const response = await fetch(appPath("/api/business/add-ons/request"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessAccountId: accountId, featureKey, note, paymentSuccessUrl: `${window.location.origin}/add-ons?payment=success&session_id={CHECKOUT_SESSION_ID}`, paymentCancelUrl: `${window.location.origin}/add-ons?payment=cancelled` }) })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || payload?.ok === false) throw new Error(payload?.message ?? "Unable to request add-on")
+      if (payload?.addOnRequest?.payment?.checkoutUrl) {
+        window.location.assign(payload.addOnRequest.payment.checkoutUrl)
+        return
+      }
       setAddOns((items) => [payload.addOnRequest, ...items.filter((item) => item.featureKey !== featureKey)])
       setPendingAddOnConfirmation(null)
       toast.success("Add-on enabled.")

@@ -30,12 +30,21 @@ export function ChangePlanButton({
     setSaving(true)
     const response = await fetch("/api/plans/change", {
       method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ businessAccountId, planId }),
+      headers: {
+        "content-type": "application/json",
+        "Idempotency-Key": `garage-plan-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      },
+      body: JSON.stringify({
+        businessAccountId,
+        planId,
+        paymentSuccessUrl: `${window.location.origin}/plans?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        paymentCancelUrl: `${window.location.origin}/plans?payment=cancelled`,
+      }),
     })
     const result = (await response.json().catch(() => null)) as {
       message?: string
       change?: { status?: string; effectiveAt?: string }
+      payment?: { checkoutUrl?: string | null; stripeConfigured?: boolean }
     } | null
     setSaving(false)
     if (!response.ok) {
@@ -43,6 +52,10 @@ export function ChangePlanButton({
       return
     }
     setIsDialogOpen(false)
+    if (result?.payment?.checkoutUrl) {
+      window.location.assign(result.payment.checkoutUrl)
+      return
+    }
     if (result?.change?.status === "scheduled") {
       const date = result.change.effectiveAt
         ? new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(result.change.effectiveAt))
