@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { LanguageSelector } from "@/components/language/language-selector"
 import { NotificationLiveListener } from "@/components/notification-live-listener"
 import { NotificationPopup } from "@/components/notification-popup"
 import { logoutGarage } from "@/lib/auth/client"
@@ -60,6 +61,7 @@ export function DashboardHeader({ user }: { user: DashboardUser }) {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          <LanguageSelector />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

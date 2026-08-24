@@ -9,5 +9,5 @@ export const mainWebsiteUrl = () => {
     ? trimTrailingSlash(configuredUrl)
     : process.env.NODE_ENV === "production"
       ? "https://websitedesignersdubai.ae"
-      : "/"
+      : "http://localhost:3001"
 };

@@ -48,13 +48,23 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode
 }) {
-  const [user, businessAccess, branding] = await Promise.all([requireGarageUser(), getBusinessAccess(), getSiteBranding()])
+  const [user, businessAccess, branding, cookieStore] = await Promise.all([
+    requireGarageUser(),
+    getBusinessAccess(),
+    getSiteBranding(),
+    cookies(),
+  ])
+  const language = cookieStore.get("app_lang")?.value === "ar" ? "ar" : "en"
 
   return (
-    <SidebarProvider>
+    <SidebarProvider dir="ltr">
       <SessionKeepalive />
       <AppSidebar branding={branding} visibleMenus={businessAccess.visibleMenus} planName={businessAccess.planName} planCode={businessAccess.planCode} isOwner={businessAccess.isOwner} />
-      <SidebarInset className="min-h-svh min-w-0 bg-brand-surface">
+      <SidebarInset
+        data-dashboard-content="true"
+        dir={language === "ar" ? "rtl" : "ltr"}
+        className="min-h-svh min-w-0 bg-brand-surface"
+      >
         <DashboardHeader user={user} />
         <div className="flex min-w-0 flex-1 flex-col p-4 lg:p-6">
           {children}

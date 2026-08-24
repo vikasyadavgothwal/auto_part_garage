@@ -165,6 +165,7 @@
 
   body {
     @apply bg-background text-foreground;
+    top: 0 !important;
   }
 
   html {
@@ -232,4 +233,25 @@
     --loading-border: #2a2a2a;
     --border-radius: var(--radius-lg);
   }
+}
+
+body > .skiptranslate,
+body > iframe.skiptranslate,
+.goog-te-banner-frame,
+.goog-te-balloon-frame,
+#goog-gt-tt,
+#google_translate_element,
+.goog-te-gadget {
+  display: none !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+}
+
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+.VIpgJd-yAWNEb-L7lbkb {
+  display: none !important;
 }
