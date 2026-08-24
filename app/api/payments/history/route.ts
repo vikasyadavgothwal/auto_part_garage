@@ -5,7 +5,10 @@ import { applySetCookieHeaders, getSetCookieHeaders, requestBackend } from "@/li
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const backend = await requestBackend("/api/v1/payments/history?scope=business", {
+  const params = new URLSearchParams(request.nextUrl.searchParams);
+  params.set("scope", "business");
+  const backendPath = `/api/v1/payments/history?${params.toString()}`;
+  const backend = await requestBackend(backendPath, {
     cookieHeader: request.headers.get("cookie"),
     userAgent: request.headers.get("user-agent"),
   });
