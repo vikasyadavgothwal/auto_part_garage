@@ -72,14 +72,11 @@ export function AppSidebar({
   return (
     <Sidebar className="border-sidebar-border bg-brand-panel text-foreground">
       <SidebarHeader className="border-b border-border px-6 py-6">
-        <Link href={appRoutes.overview} className="block">
+        <Link href={appRoutes.overview} className="flex justify-center">
           {branding?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={branding.logoUrl} alt={branding.siteName} className="h-14 max-w-[230px] object-contain object-left" />
-          ) : <h2 className="text-xl font-bold">{branding?.siteName === "AutoPartsPro" || branding?.siteName === "AutoParts Pro" || !branding?.siteName ? <>AutoParts<span className="text-primary"> Pro</span></> : branding.siteName}</h2>}
-          <p className="mt-1 text-sm text-muted-foreground">
-            Garage
-          </p>
+            <img src={branding.logoUrl} alt={branding.siteName} className="h-20 w-auto max-w-full object-contain object-center" />
+          ) : <h2 className="text-center text-2xl font-bold">{branding?.siteName === "AutoPartsPro" || branding?.siteName === "AutoParts Pro" || !branding?.siteName ? <>AutoParts<span className="text-primary"> Pro</span></> : branding.siteName}</h2>}
         </Link>
         {planName && visibleMenuSet.has("plans") ? (
           <Link
