@@ -7,6 +7,7 @@ import { BillingPrice } from "@/components/garage/plans/billing-price"
 import { ChangePlanButton } from "@/components/garage/plans/change-plan-button"
 import { PaymentHistoryTable } from "@/components/garage/plans/payment-history-table"
 import { requestBackend } from "@/lib/auth/backend"
+import type { PaymentReturnStatus } from "@/lib/payments.server"
 
 type BusinessPlan = {
   id: string
@@ -79,7 +80,15 @@ async function readPlanData() {
   return { access, plans: (plansPayload.plans ?? []).filter((plan) => plan.accountType === "Garage"), transactions: access?.paymentTransactions ?? transactionsPayload.transactions ?? [] }
 }
 
-export async function PlansPage() {
+const paymentMessage = (status: PaymentReturnStatus) => {
+  if (status === "success") return { title: "Payment successful", body: "Your plan has been upgraded and is active now.", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600" }
+  if (status === "cancelled") return { title: "Payment cancelled", body: "Your plan was not changed.", className: "border-amber-500/30 bg-amber-500/10 text-amber-600" }
+  if (status === "failed") return { title: "Payment failed", body: "Your plan was not upgraded. Please try again or use another payment method.", className: "border-red-500/30 bg-red-500/10 text-red-600" }
+  if (status === "pending") return { title: "Payment pending", body: "Stripe has not confirmed this payment yet. Your plan will upgrade after confirmation.", className: "border-amber-500/30 bg-amber-500/10 text-amber-600" }
+  return null
+}
+
+export async function PlansPage({ paymentStatus = "none" }: { paymentStatus?: PaymentReturnStatus }) {
   const { access, plans, transactions } = await readPlanData()
   const currentPlan = access?.businessAccount.plan
   const usage = access?.businessAccount.usage
@@ -87,8 +96,10 @@ export async function PlansPage() {
   const scheduledChange = transactions.find((item) => item.type === "plan" && item.status === "Scheduled")
   const usageCards = currentPlan ? [{ label: "Services", value: toNumber(usage?.services), limit: currentPlan.limits.services }, { label: "Appointments", value: toNumber(usage?.appointments), limit: currentPlan.limits.appointments }, { label: "Staff", value: toNumber(usage?.staff), limit: currentPlan.limits.staff }] : []
   const reachedLimits = usageCards.filter((item) => isLimitReached(item.value, item.limit))
+  const returnMessage = paymentMessage(paymentStatus)
 
   return <div className="space-y-6">
+    {returnMessage ? <Card className={returnMessage.className}><CardContent className="pt-6"><p className="font-semibold">{returnMessage.title}</p><p className="mt-1 text-sm">{returnMessage.body}</p></CardContent></Card> : null}
     {currentPlan ? <section className="rounded-lg border border-border bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-sm text-muted-foreground">Current plan</p><h2 className="mt-2 text-2xl font-semibold">{currentPlan.name}</h2><p className="mt-1 text-sm text-muted-foreground">{currentPlan.description}</p></div>{currentPlan.code !== "Free" ? <div className="text-left sm:text-right"><BillingPrice code={currentPlan.code} currency={currentPlan.price.currency} monthlyAmount={currentPlan.price.amount} yearlyAmount={currentPlan.price.yearlyAmount} /><p className="mt-1 text-xs text-emerald-500">Active subscription</p></div> : null}</div>
       

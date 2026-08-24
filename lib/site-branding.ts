@@ -1,8 +1,12 @@
 import { requestBackend } from "@/lib/auth/backend"
 
-export type SiteBranding = { siteName: string; logoUrl: string }
+export type SiteBranding = { siteName: string; logoUrl: string; faviconUrl: string }
 
-const FALLBACK_BRANDING: SiteBranding = { siteName: "AutoPartsPro", logoUrl: "" }
+const FALLBACK_BRANDING: SiteBranding = {
+  siteName: "AutoPartsPro",
+  logoUrl: "",
+  faviconUrl: "",
+}
 
 export async function getSiteBranding(): Promise<SiteBranding> {
   try {
@@ -10,7 +14,11 @@ export async function getSiteBranding(): Promise<SiteBranding> {
     if (!response.ok) return FALLBACK_BRANDING
     const payload = (await response.json()) as { ok?: boolean; settings?: Partial<SiteBranding> }
     return payload.ok
-      ? { siteName: payload.settings?.siteName?.trim() || FALLBACK_BRANDING.siteName, logoUrl: payload.settings?.logoUrl?.trim() || "" }
+      ? {
+          siteName: payload.settings?.siteName?.trim() || FALLBACK_BRANDING.siteName,
+          logoUrl: payload.settings?.logoUrl?.trim() || "",
+          faviconUrl: payload.settings?.faviconUrl?.trim() || FALLBACK_BRANDING.faviconUrl,
+        }
       : FALLBACK_BRANDING
   } catch {
     return FALLBACK_BRANDING

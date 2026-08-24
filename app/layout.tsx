@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { LanguageProvider } from "@/components/language/language-provider";
+import { getSiteBranding } from "@/lib/site-branding";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,10 +15,14 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-export const metadata: Metadata = {
-  title: "Garage",
-  description: "Garage Dashboard",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getSiteBranding();
+  return {
+    title: "Garage",
+    description: "Garage Dashboard",
+    icons: { icon: branding.faviconUrl || "/favicon.ico" },
+  };
+}
 
 const isDashboardLanguage = (value: unknown): value is "en" | "ar" =>
   value === "en" || value === "ar";

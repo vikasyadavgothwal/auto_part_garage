@@ -1,11 +1,13 @@
 import { PaymentsPage } from "@/components/payments/payments-page";
-import { getBusinessPaymentHistory } from "@/lib/payments.server";
+import { getBusinessPaymentHistory, refreshPaymentReturn } from "@/lib/payments.server";
 
 type PaymentsRoutePageProps = {
   searchParams: Promise<{
     page?: string;
     from?: string;
     to?: string;
+    payment?: string;
+    session_id?: string;
   }>;
 };
 
@@ -27,6 +29,7 @@ export default async function PaymentsRoutePage({
     from: dateParam(params.from),
     to: dateParam(params.to),
   };
+  const paymentStatus = await refreshPaymentReturn(params.session_id, params.payment);
   const paymentsData = await getBusinessPaymentHistory(filters);
-  return <PaymentsPage paymentsData={paymentsData} filters={filters} />;
+  return <PaymentsPage paymentsData={paymentsData} filters={filters} paymentStatus={paymentStatus} />;
 }

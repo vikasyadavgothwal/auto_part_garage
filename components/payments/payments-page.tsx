@@ -15,6 +15,7 @@ import type {
   PaymentHistoryFilters,
   PaymentHistoryItem,
   PaymentHistoryPagination,
+  PaymentReturnStatus,
 } from "@/lib/payments.server";
 
 const dateFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -77,12 +78,14 @@ const pageHref = (
 export function PaymentsPage({
   paymentsData,
   filters,
+  paymentStatus = "none",
 }: {
   paymentsData: {
     payments: PaymentHistoryItem[];
     pagination: PaymentHistoryPagination;
   };
   filters: PaymentHistoryFilters;
+  paymentStatus?: PaymentReturnStatus;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -92,6 +95,16 @@ export function PaymentsPage({
     to: parseFilterDate(filters.to),
   }));
   const hasDateFilter = Boolean(filters.from || filters.to);
+  const returnMessage =
+    paymentStatus === "success"
+      ? { title: "Payment successful", body: "Your payment was confirmed and your payment history is updated.", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-500" }
+      : paymentStatus === "cancelled"
+        ? { title: "Payment cancelled", body: "No payment was taken.", className: "border-amber-500/30 bg-amber-500/10 text-amber-500" }
+        : paymentStatus === "failed"
+          ? { title: "Payment failed", body: "Stripe reported this payment as failed.", className: "border-red-500/30 bg-red-500/10 text-red-500" }
+          : paymentStatus === "pending"
+            ? { title: "Payment pending", body: "Stripe has not confirmed this payment yet.", className: "border-amber-500/30 bg-amber-500/10 text-amber-500" }
+            : null;
   const rangeStart = pagination.total
     ? (pagination.page - 1) * pagination.pageSize + 1
     : 0;
@@ -117,6 +130,7 @@ export function PaymentsPage({
           Plan and add-on payment attempts, including failed Stripe payments.
         </p>
       </div>
+      {returnMessage ? <Card className={returnMessage.className}><CardContent className="pt-6"><p className="font-semibold">{returnMessage.title}</p><p className="mt-1 text-sm">{returnMessage.body}</p></CardContent></Card> : null}
 
       <Card>
         <CardHeader className="gap-4 lg:flex lg:flex-row lg:items-start lg:justify-between">

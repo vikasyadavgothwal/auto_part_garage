@@ -40,6 +40,8 @@ type PaymentHistoryPayload = {
   pagination?: PaymentHistoryPagination;
 };
 
+export type PaymentReturnStatus = "none" | "success" | "cancelled" | "pending" | "failed";
+
 const emptyPaymentHistory = (filters: PaymentHistoryFilters = {}) => ({
   payments: [] as PaymentHistoryItem[],
   pagination: {
@@ -76,4 +78,17 @@ export async function getBusinessPaymentHistory(filters: PaymentHistoryFilters =
     payments: payload.payments,
     pagination: payload.pagination ?? emptyPaymentHistory({ page, pageSize }).pagination,
   };
+}
+
+export async function refreshPaymentReturn(sessionId?: string, payment?: string): Promise<PaymentReturnStatus> {
+  if (payment === "cancelled") return "cancelled";
+  if (payment !== "success") return "none";
+  if (!sessionId) return "success";
+  const response = await requestBackend(`/api/v1/payments/${encodeURIComponent(sessionId)}/status`, {
+    cookieHeader: (await cookies()).toString(),
+  });
+  const payload = await response.json().catch(() => null) as { payment?: { status?: string } } | null;
+  if (payload?.payment?.status === "succeeded") return "success";
+  if (payload?.payment?.status === "failed") return "failed";
+  return "pending";
 }
