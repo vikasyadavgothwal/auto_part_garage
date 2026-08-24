@@ -75,10 +75,10 @@ export function ChangePlanButton({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isDowngrade ? "Schedule downgrade" : "Upgrade plan"}</DialogTitle>
+            <DialogTitle>{isDowngrade ? "Downgrade plan" : "Upgrade plan"}</DialogTitle>
             <DialogDescription>
               {isDowngrade
-                ? `${currentPlanName} remains active until its current billing period ends. ${planName} activates automatically after that.`
+                ? `Pay now to downgrade from ${currentPlanName} to ${planName}.`
                 : `${planName} activates immediately and replaces ${currentPlanName}.`}
             </DialogDescription>
           </DialogHeader>
@@ -87,7 +87,7 @@ export function ChangePlanButton({
               <Button type="button" variant="outline" disabled={saving}>Cancel</Button>
             </DialogClose>
             <Button type="button" onClick={() => void changePlan()} disabled={saving}>
-              {saving ? "Updating..." : isDowngrade ? "Schedule downgrade" : "Confirm upgrade"}
+              {saving ? "Updating..." : isDowngrade ? "Pay and downgrade" : "Confirm upgrade"}
             </Button>
           </DialogFooter>
         </DialogContent>

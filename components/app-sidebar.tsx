@@ -75,7 +75,7 @@ export function AppSidebar({
         <Link href={appRoutes.overview} className="block">
           {branding?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={branding.logoUrl} alt={branding.siteName} className="h-10 max-w-[190px] object-contain object-left" />
+            <img src={branding.logoUrl} alt={branding.siteName} className="h-14 max-w-[230px] object-contain object-left" />
           ) : <h2 className="text-xl font-bold">{branding?.siteName === "AutoPartsPro" || branding?.siteName === "AutoParts Pro" || !branding?.siteName ? <>AutoParts<span className="text-primary"> Pro</span></> : branding.siteName}</h2>}
           <p className="mt-1 text-sm text-muted-foreground">
             Garage
