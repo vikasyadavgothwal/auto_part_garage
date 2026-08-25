@@ -31,6 +31,8 @@ export type GarageBookingRecord = {
   durationMinutes: number
   price: number
   currency: string
+  advanceAmount: number | null
+  advancePaymentStatus: string | null
   status: "pending" | "pending_slot_selection" | "confirmed" | "completed" | "cancelled"
   createdAt: string
   updatedAt: string
@@ -82,6 +84,11 @@ const formatVehicle = (booking: GarageBookingRecord) =>
 
 const formatMoney = (amount: number, currency: string) =>
   `${currency} ${(amount / 100).toFixed(2)}`
+
+const remainingBookingAmount = (booking: GarageBookingRecord) =>
+  booking.advancePaymentStatus === "succeeded"
+    ? Math.max(0, booking.price - (booking.advanceAmount ?? 0))
+    : booking.price
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
@@ -197,7 +204,10 @@ export function buildBookingsPageData(
     (booking) =>
       booking.status === "pending" || booking.status === "pending_slot_selection",
   )
-  const revenue = bookings.reduce((total, booking) => total + booking.price, 0)
+  const revenue = bookings.reduce(
+    (total, booking) => total + remainingBookingAmount(booking),
+    0,
+  )
 
   return {
     ...bookingsPageData,
@@ -243,7 +253,7 @@ export function buildBookingsPageData(
       duration: `${booking.durationMinutes} min`,
       notes: booking.notes,
       cancellationReason: booking.cancellationReason,
-      revenue: formatMoney(booking.price, booking.currency),
+      revenue: formatMoney(remainingBookingAmount(booking), booking.currency),
       status: titleCase(booking.status),
       rawStatus: booking.status,
       statusClass: statusClass(booking.status),

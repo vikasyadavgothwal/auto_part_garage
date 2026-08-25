@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { HelpCircle, MessageSquare, PlayCircle, Search } from "lucide-react"
+import { HelpCircle, MessageSquare, PlayCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { appPath, appRoutes } from "@/lib/routes"
 
 type FeatureArea = "add-ons" | "integrations" | "support"
@@ -130,7 +129,6 @@ export function GarageFeatureAccessPage({
   const [addOns, setAddOns] = useState<AddOnRequest[]>([])
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
   const [support] = useState<SupportContent>(initialSupport)
-  const [faqQuery, setFaqQuery] = useState("")
   const [showAllVideos, setShowAllVideos] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<SupportVideo | null>(null)
   const [pendingAddOnConfirmation, setPendingAddOnConfirmation] = useState<PendingAddOnConfirmation | null>(null)
@@ -143,18 +141,8 @@ export function GarageFeatureAccessPage({
   const accountId = access?.businessAccount.id
   const integrationAction = access?.actions?.["integrations.connect"]
   const addOnGroups = useMemo(() => addOnSections(access?.businessAccount.type ?? "Business", access?.limitAddOns ?? [], access?.requestableFeatures ?? []), [access?.businessAccount.type, access?.limitAddOns, access?.requestableFeatures])
-  const filteredFaqs = useMemo(() => {
-    const query = faqQuery.trim().toLowerCase()
-    if (!query) return support.faqs
-    return support.faqs.filter((faq) => `${faq.question} ${faq.answer}`.toLowerCase().includes(query))
-  }, [faqQuery, support.faqs])
-  const filteredVideos = useMemo(() => {
-    const query = faqQuery.trim().toLowerCase()
-    if (!query) return support.videos
-    return support.videos.filter((video) => video.title.toLowerCase().includes(query))
-  }, [faqQuery, support.videos])
-  const visibleVideos = showAllVideos ? filteredVideos : filteredVideos.slice(0, 3)
-  const hasMoreVideos = filteredVideos.length > visibleVideos.length
+  const visibleVideos = showAllVideos ? support.videos : support.videos.slice(0, 3)
+  const hasMoreVideos = support.videos.length > visibleVideos.length
 
   useEffect(() => {
     if (!accountId || area !== "add-ons") return
@@ -227,15 +215,11 @@ export function GarageFeatureAccessPage({
 
   return <main className="space-y-6">
     <section className="rounded-xl border border-border bg-card p-6 shadow-sm">
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px] lg:items-end">
+      <div className="grid gap-5">
         <div>
           <p className="text-sm font-medium text-primary">Support Center</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">How can we help your garage?</h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">Find answers, watch quick tutorials, or send a support request if you need help from the Auto Parts Pro team.</p>
-        </div>
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={faqQuery} onChange={(event) => setFaqQuery(event.target.value.slice(0, 100))} maxLength={100} placeholder="Search support center" className="h-11 pl-9" />
         </div>
       </div>
     </section>
@@ -247,13 +231,13 @@ export function GarageFeatureAccessPage({
       </CardHeader>
       <CardContent>
         <div className="grid gap-3">
-          {filteredFaqs.map((faq) => (
+          {support.faqs.map((faq) => (
             <details key={faq.id} className="group rounded-lg border border-border bg-background/70 p-4 transition-colors open:bg-muted/40">
               <summary className="cursor-pointer font-medium text-foreground">{faq.question}</summary>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{faq.answer}</p>
             </details>
           ))}
-          {!filteredFaqs.length ? <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">{support.faqs.length ? "No FAQs match your search." : "No FAQs are available yet."}</p> : null}
+          {!support.faqs.length ? <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">No FAQs are available yet.</p> : null}
         </div>
       </CardContent>
     </Card>
@@ -264,7 +248,7 @@ export function GarageFeatureAccessPage({
         <CardDescription>Short walkthroughs for the garage dashboard workflow.</CardDescription>
       </CardHeader>
       <CardContent>
-        {filteredVideos.length ? <>
+        {support.videos.length ? <>
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {visibleVideos.map((video) => {
               const thumbnail = youtubeThumbnailUrl(video.videoUrl)
