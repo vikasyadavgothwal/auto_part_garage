@@ -91,5 +91,5 @@ export async function refreshPaymentReturn(sessionId?: string, payment?: string)
   const payload = await response.json().catch(() => null) as { payment?: { status?: string } } | null;
   if (payload?.payment?.status === "succeeded") return "success";
   if (payload?.payment?.status === "failed") return "failed";
-  return "failed";
+  return "pending";
 }
