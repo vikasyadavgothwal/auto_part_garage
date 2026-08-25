@@ -66,6 +66,17 @@ const MOBILE_PATTERN = /^\+\d{8,18}$/
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 const PLACE_PATTERN = /^[A-Za-z][A-Za-z\s'.-]*$/
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
+const CLOUDFRONT_URL = "https://d138jhvnngk7dx.cloudfront.net"
+const S3_BUCKET_HOST = "auto-parts-pro.s3.eu-north-1.amazonaws.com"
+const cloudFrontAsset = (key: string) => `${CLOUDFRONT_URL}/${key.split("/").filter(Boolean).map(encodeURIComponent).join("/")}`
+const displayImageUrl = (url: string) => {
+  try {
+    const parsed = new URL(url)
+    return parsed.host === S3_BUCKET_HOST ? cloudFrontAsset(decodeURIComponent(parsed.pathname).replace(/^\/+/, "")) : url
+  } catch {
+    return url
+  }
+}
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024
 const MAX_GALLERY_UPLOADS = 5
 const MAX_GALLERY_IMAGES_TOTAL = 5
@@ -801,11 +812,11 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   const garageImageSrc = pendingGarageImage?.previewUrl || (
     form.garageImageKey
       ? appPath(`/api/settings/images/view?key=${encodeURIComponent(form.garageImageKey)}`)
-      : form.garageImageUrl
+      : displayImageUrl(form.garageImageUrl)
   )
   const galleryImageSrc = (url: string, index: number) => {
     const key = form.galleryImageKeys[index]
-    return key ? appPath(`/api/settings/images/view?key=${encodeURIComponent(key)}`) : url
+    return key ? appPath(`/api/settings/images/view?key=${encodeURIComponent(key)}`) : displayImageUrl(url)
   }
 
   const emailVerified =

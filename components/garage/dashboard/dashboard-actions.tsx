@@ -3,10 +3,16 @@ import { Calendar, Wrench } from "lucide-react"
 
 import { appRoutes } from "@/lib/routes"
 
-export function DashboardActions() {
+export function DashboardActions({
+  canViewSchedule = true,
+  canViewServices = true,
+}: {
+  canViewSchedule?: boolean
+  canViewServices?: boolean
+}) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <Link
+      {canViewSchedule ? <Link
         href={appRoutes.schedule}
         className="flex items-center gap-4 rounded-xl border border-primary/20 bg-primary/10 p-6 transition-all hover:bg-primary/20"
       >
@@ -20,9 +26,9 @@ export function DashboardActions() {
           </div>
           <div className="text-sm text-brand-muted">Manage your calendar</div>
         </div>
-      </Link>
+      </Link> : null}
 
-      <Link
+      {canViewServices ? <Link
         href={appRoutes.services}
         className="flex items-center gap-4 rounded-xl border border-border bg-card p-6 text-left transition-all hover:border-primary"
       >
@@ -38,7 +44,7 @@ export function DashboardActions() {
             Update your service catalog
           </div>
         </div>
-      </Link>
+      </Link> : null}
     </div>
   )
 }

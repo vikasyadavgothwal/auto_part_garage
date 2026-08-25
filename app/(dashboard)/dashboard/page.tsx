@@ -6,7 +6,9 @@ import { MonthlyPerformanceCard } from "@/components/garage/dashboard/monthly-pe
 import { RecentReviewsCard } from "@/components/garage/dashboard/recent-reviews-card"
 import { TodaysScheduleSection } from "@/components/garage/dashboard/todays-schedule-section"
 import { UpcomingBookingsSection } from "@/components/garage/dashboard/upcoming-bookings-section"
+import { AccessRestrictedCard } from "@/components/garage/shared/access-restricted-card"
 import { PageHeading } from "@/components/garage/shared/page-heading"
+import { getGarageBusinessAccess } from "@/lib/business-access.server"
 import { getGarageDashboardData } from "@/lib/garage-dashboard.server"
 import { appPath, appRoutes } from "@/lib/routes"
 
@@ -24,21 +26,29 @@ export default async function GarageDashboardPage({ searchParams }: GarageDashbo
     redirect(`${appPath(appRoutes.plans)}?${query.toString()}`)
   }
 
-  const dashboardPageData = await getGarageDashboardData()
+  const access = await getGarageBusinessAccess()
+  const canBookings = access.canView("bookings")
+  const canSchedule = access.canView("schedule")
+  const canServices = access.canView("services")
+  const canReviews = access.canView("reviews")
+  const canReports = access.canView("reports")
+  const canSeeOperations = access.isOwner || canBookings || canSchedule || canServices || canReviews || canReports
+  const dashboardPageData = canSeeOperations ? await getGarageDashboardData() : null
 
   return (
     <div className="space-y-8">
       <PageHeading
-        title={dashboardPageData.title}
-        description={dashboardPageData.description}
+        title={dashboardPageData?.title ?? "Garage Dashboard"}
+        description={dashboardPageData?.description ?? "Dashboard access requires an assigned section."}
       />
 
-      <DashboardStats stats={dashboardPageData.stats} />
-      <DashboardActions />
-      <TodaysScheduleSection schedule={dashboardPageData.todaysSchedule} />
-      <UpcomingBookingsSection bookings={dashboardPageData.upcomingBookings} />
-      <MonthlyPerformanceCard performance={dashboardPageData.performance} />
-      <RecentReviewsCard reviews={dashboardPageData.reviews} />
+      {!dashboardPageData ? <AccessRestrictedCard title="No dashboard access" message="Ask the account owner to assign at least one Garage section to your role." /> : null}
+      {dashboardPageData ? <DashboardStats stats={dashboardPageData.stats} /> : null}
+      {dashboardPageData && (canSchedule || canServices) ? <DashboardActions canViewSchedule={canSchedule} canViewServices={canServices} /> : null}
+      {dashboardPageData && canSchedule ? <TodaysScheduleSection schedule={dashboardPageData.todaysSchedule} /> : null}
+      {dashboardPageData && canBookings ? <UpcomingBookingsSection bookings={dashboardPageData.upcomingBookings} /> : null}
+      {dashboardPageData && canReports ? <MonthlyPerformanceCard performance={dashboardPageData.performance} /> : null}
+      {dashboardPageData && canReviews ? <RecentReviewsCard reviews={dashboardPageData.reviews} /> : null}
     </div>
   )
 }

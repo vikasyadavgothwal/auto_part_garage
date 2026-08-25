@@ -2,7 +2,9 @@ import { RatingDistributionCard } from "@/components/garage/reviews/rating-distr
 import { ReputationTipsCard } from "@/components/garage/reviews/reputation-tips-card"
 import { ReviewStats } from "@/components/garage/reviews/review-stats"
 import { ReviewsTable } from "@/components/garage/reviews/reviews-table"
+import { AccessRestrictedCard } from "@/components/garage/shared/access-restricted-card"
 import { PageHeading } from "@/components/garage/shared/page-heading"
+import { getGarageBusinessAccess } from "@/lib/business-access.server"
 import {
   buildReviewsPageData,
   getGarageReviews,
@@ -17,6 +19,9 @@ export default async function GarageReviewsPage({
 }: {
   searchParams: Promise<PageSearchParams>
 }) {
+  const access = await getGarageBusinessAccess()
+  if (!access.canView("reviews")) return <AccessRestrictedCard message="You do not have permission to view Garage reviews." />
+
   const page = pageFromSearchParams(await searchParams)
   const [allReviews, tablePage] = await Promise.all([
     getGarageReviews(),

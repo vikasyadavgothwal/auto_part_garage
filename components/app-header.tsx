@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, ChevronDown, ExternalLink, LogOut, Search, User } from "lucide-react"
+import { Bell, ChevronDown, ExternalLink, LogOut, User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { LanguageSelector } from "@/components/language/language-selector"
 import { NotificationLiveListener } from "@/components/notification-live-listener"
@@ -48,17 +47,7 @@ export function DashboardHeader({ user }: { user: DashboardUser }) {
       <div className="flex h-16 min-w-0 items-center justify-between gap-4 px-4 lg:px-8">
         <SidebarTrigger className="text-brand-muted hover:bg-transparent hover:text-foreground lg:hidden" />
 
-        <div className="min-w-0 max-w-xl flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-muted" />
-            <Input
-              type="text"
-              maxLength={100}
-              placeholder="Search..."
-              className="h-10 w-full rounded-sm border border-border bg-brand-surface pl-10 pr-4 text-foreground placeholder:text-brand-muted focus-visible:border-primary focus-visible:ring-0"
-            />
-          </div>
-        </div>
+        <div className="min-w-0 flex-1" />
 
         <div className="flex shrink-0 items-center gap-2">
           <LanguageSelector />

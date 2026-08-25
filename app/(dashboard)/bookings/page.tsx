@@ -1,7 +1,9 @@
 import { BookingStats } from "@/components/garage/bookings/booking-stats"
 import { BookingsTable } from "@/components/garage/bookings/bookings-table"
 import { CalendarViewCard } from "@/components/garage/bookings/calendar-view-card"
+import { AccessRestrictedCard } from "@/components/garage/shared/access-restricted-card"
 import { PageHeading } from "@/components/garage/shared/page-heading"
+import { getGarageBusinessAccess } from "@/lib/business-access.server"
 import {
   buildBookingsPageData,
   getGarageBookings,
@@ -16,6 +18,9 @@ export default async function GarageBookingsPage({
 }: {
   searchParams: Promise<PageSearchParams>
 }) {
+  const access = await getGarageBusinessAccess()
+  if (!access.canView("bookings")) return <AccessRestrictedCard message="You do not have permission to view Garage bookings." />
+
   const page = pageFromSearchParams(await searchParams)
   const [allBookings, tablePage] = await Promise.all([
     getGarageBookings(),

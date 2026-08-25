@@ -1,6 +1,7 @@
 import { cookies } from "next/headers"
 
 import { OfflineAppointmentDialog } from "@/components/garage/schedule/offline-appointment-dialog"
+import { AccessRestrictedCard } from "@/components/garage/shared/access-restricted-card"
 import { ScheduleCalendarTable } from "@/components/garage/schedule/schedule-calendar-table"
 import { ScheduleOverviewCard } from "@/components/garage/schedule/schedule-overview-card"
 import { ScheduleSettingsCard } from "@/components/garage/schedule/schedule-settings-card"
@@ -11,6 +12,7 @@ import {
 } from "@/lib/garage-bookings.server"
 import { getGarageServices } from "@/lib/garage-services.server"
 import { requestBackend } from "@/lib/auth/backend"
+import { getGarageBusinessAccess } from "@/lib/business-access.server"
 import { getGarageSettings } from "@/lib/garage-settings.server"
 import { appRoutes } from "@/lib/routes"
 
@@ -48,6 +50,9 @@ async function getGarageAction(action: string) {
 export default async function GarageSchedulePage({
   searchParams,
 }: GarageSchedulePageProps) {
+  const menuAccess = await getGarageBusinessAccess()
+  if (!menuAccess.canView("schedule")) return <AccessRestrictedCard message="You do not have permission to view Garage schedule." />
+
   const rawWeek = (await searchParams).week
   const parsedWeek = Number.parseInt(
     Array.isArray(rawWeek) ? (rawWeek[0] ?? "0") : (rawWeek ?? "0"),
