@@ -21,12 +21,16 @@ const expiresSoon = (token: string) => {
 }
 
 export function proxy(request: NextRequest) {
-  if (request.method !== "GET" || !request.headers.get("accept")?.includes("text/html")) return NextResponse.next()
+  if (request.method !== "GET") return NextResponse.next()
   const pathname = request.nextUrl.pathname
   if (pathname.includes("/api/") || pathname.endsWith("/login") || pathname.includes("/_next/")) return NextResponse.next()
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set("x-garage-return-to", `${pathname}${request.nextUrl.search}`)
+  const nextResponse = () => NextResponse.next({ request: { headers: requestHeaders } })
+  if (!request.headers.get("accept")?.includes("text/html")) return nextResponse()
   const refresh = request.cookies.get(refreshCookie)?.value
   const access = request.cookies.get(accessCookie)?.value
-  if (!refresh || (access && !expiresSoon(access))) return NextResponse.next()
+  if (!refresh || (access && !expiresSoon(access))) return nextResponse()
   const destination = request.nextUrl.clone()
   destination.pathname = `${dashboardBasePath}/api/auth/refresh`
   destination.search = ""

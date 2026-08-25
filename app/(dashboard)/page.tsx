@@ -1,5 +1,9 @@
 import DashboardOverviewPage from "./dashboard/page"
 
-export default function FleetHomePage() {
-  return <DashboardOverviewPage />
+type GarageHomePageProps = {
+  searchParams?: Promise<{ payment?: string; session_id?: string }>
+}
+
+export default function GarageHomePage({ searchParams }: GarageHomePageProps) {
+  return <DashboardOverviewPage searchParams={searchParams} />
 }

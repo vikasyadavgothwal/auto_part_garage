@@ -83,12 +83,13 @@ export async function getBusinessPaymentHistory(filters: PaymentHistoryFilters =
 export async function refreshPaymentReturn(sessionId?: string, payment?: string): Promise<PaymentReturnStatus> {
   if (payment === "cancelled") return "cancelled";
   if (payment !== "success") return "none";
-  if (!sessionId) return "success";
+  if (!sessionId) return "failed";
   const response = await requestBackend(`/api/v1/payments/${encodeURIComponent(sessionId)}/status`, {
     cookieHeader: (await cookies()).toString(),
   });
+  if (!response.ok) return "failed";
   const payload = await response.json().catch(() => null) as { payment?: { status?: string } } | null;
   if (payload?.payment?.status === "succeeded") return "success";
   if (payload?.payment?.status === "failed") return "failed";
-  return "pending";
+  return "failed";
 }
