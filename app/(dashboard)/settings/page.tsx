@@ -16,8 +16,9 @@ async function getSettingsContext() {
   const cookieHeader = (await cookies()).toString()
   const accessResponse = await requestBackend("/api/v1/business/access", { cookieHeader }).catch(() => null)
   const accessPayload = accessResponse?.ok ? ((await accessResponse.json()) as BusinessAccessPayload) : null
+  const account = accessPayload?.access?.find((item) => item.businessAccount.type === "Garage")
   return {
-    isOwner: Boolean(accessPayload?.access?.find((item) => item.businessAccount.type === "Garage")?.businessAccount.isOwner),
+    hasBusinessAccess: Boolean(account),
   }
 }
 
@@ -26,7 +27,7 @@ export default async function SettingsPage() {
     requireGarageUser(),
     getSettingsContext(),
   ])
-  const profile = context.isOwner ? await getGarageSettings() : null
+  const profile = context.hasBusinessAccess ? await getGarageSettings() : null
 
   if (profile) {
     return (

@@ -111,6 +111,8 @@ const sanitizeValue = (field: keyof OfflineAppointmentForm, value: string) => {
   return value
 }
 
+const vehicleTextPattern = /^[A-Za-z0-9][A-Za-z0-9 .,'/-]*$/
+
 export function OfflineAppointmentDialog({
   title,
   description,
@@ -171,6 +173,9 @@ export function OfflineAppointmentDialog({
   const validate = () => {
     if (!form.serviceId) return "Select a service"
     if (form.customerName.trim().length < 2) return "Customer name is required"
+    if (!vehicleTextPattern.test(form.customerName.trim())) {
+      return "Customer name can only include letters, numbers, spaces, and common punctuation"
+    }
     if (!/^\d{7,15}$/.test(form.customerPhone)) {
       return "Mobile number must contain 7 to 15 digits"
     }
@@ -195,6 +200,12 @@ export function OfflineAppointmentDialog({
       if (!Number.isInteger(year) || year < 1900 || year > maxYear) {
         return `Vehicle year must be between 1900 and ${maxYear}`
       }
+    }
+    if (form.vehicleMake.trim() && !vehicleTextPattern.test(form.vehicleMake.trim())) {
+      return "Vehicle make can only include letters, numbers, spaces, and common punctuation"
+    }
+    if (form.vehicleModel.trim() && !vehicleTextPattern.test(form.vehicleModel.trim())) {
+      return "Vehicle model can only include letters, numbers, spaces, and common punctuation"
     }
     if (form.vehicleVin && !/^[A-HJ-NPR-Z0-9]{5,17}$/.test(form.vehicleVin)) {
       return "VIN must be 5 to 17 letters/numbers and cannot include I, O, or Q"
@@ -313,6 +324,7 @@ export function OfflineAppointmentDialog({
                   onChange={(event) => updateForm("customerName", event.target.value)}
                   required
                   maxLength={160}
+                  placeholder="Customer full name"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -327,6 +339,7 @@ export function OfflineAppointmentDialog({
                   maxLength={15}
                   value={form.customerPhone}
                   onChange={(event) => updateForm("customerPhone", event.target.value)}
+                  placeholder="971501234567"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -338,6 +351,7 @@ export function OfflineAppointmentDialog({
                   type="email"
                   value={form.customerEmail}
                   onChange={(event) => updateForm("customerEmail", event.target.value)}
+                  placeholder="customer@example.com"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -403,6 +417,7 @@ export function OfflineAppointmentDialog({
                   maxLength={4}
                   value={form.vehicleYear}
                   onChange={(event) => updateForm("vehicleYear", event.target.value)}
+                  placeholder="2022"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -414,6 +429,7 @@ export function OfflineAppointmentDialog({
                   value={form.vehicleMake}
                   onChange={(event) => updateForm("vehicleMake", event.target.value)}
                   maxLength={80}
+                  placeholder="Toyota"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -425,6 +441,7 @@ export function OfflineAppointmentDialog({
                   value={form.vehicleModel}
                   onChange={(event) => updateForm("vehicleModel", event.target.value)}
                   maxLength={80}
+                  placeholder="Camry"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -436,6 +453,7 @@ export function OfflineAppointmentDialog({
                   maxLength={17}
                   value={form.vehicleVin}
                   onChange={(event) => updateForm("vehicleVin", event.target.value)}
+                  placeholder="1HGBH41JXMN109186"
                   className="h-11 border-border bg-brand-surface"
                 />
               </div>
@@ -448,6 +466,7 @@ export function OfflineAppointmentDialog({
                   onChange={(event) => updateForm("notes", event.target.value)}
                   maxLength={500}
                   rows={4}
+                  placeholder="Customer concern, arrival notes, or internal reminder"
                   className="min-h-28 w-full resize-y rounded-lg border border-border bg-brand-surface px-3 py-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 />
                 <p className="text-xs text-brand-muted">

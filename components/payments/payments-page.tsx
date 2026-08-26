@@ -7,10 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { appPath } from "@/lib/routes";
 import { CalendarIcon } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { DateRange } from "react-day-picker";
+import { toast } from "sonner";
 import type {
   PaymentHistoryFilters,
   PaymentHistoryItem,
@@ -46,6 +48,9 @@ const statusClass = (status: string) =>
 
 const purposeText = (purpose: string) =>
   purpose.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+
+const canActOnPayment = (status: string) =>
+  status === "pending" || status === "requires_payment";
 
 const isoDate = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -94,6 +99,7 @@ export function PaymentsPage({
     from: parseFilterDate(filters.from),
     to: parseFilterDate(filters.to),
   }));
+  const [actionPaymentId, setActionPaymentId] = useState<string | null>(null);
   const hasDateFilter = Boolean(filters.from || filters.to);
   const returnMessage =
     paymentStatus === "success"
@@ -109,6 +115,14 @@ export function PaymentsPage({
     ? (pagination.page - 1) * pagination.pageSize + 1
     : 0;
   const rangeEnd = Math.min(pagination.page * pagination.pageSize, pagination.total);
+
+  useEffect(() => {
+    if (paymentStatus === "success") {
+      toast.success("Payment successful. Your payment history is updated.");
+      router.refresh();
+    }
+  }, [paymentStatus, router]);
+
   const applyDateFilter = () => {
     const params = new URLSearchParams();
     params.set("page", "1");
@@ -120,6 +134,57 @@ export function PaymentsPage({
   const clearDateFilter = () => {
     setRange(undefined);
     router.push(pathname);
+  };
+
+  const loadPaymentStatus = async (payment: PaymentHistoryItem, cancelled = false) => {
+    const response = await fetch(
+      appPath(
+        `/api/payments/${encodeURIComponent(payment.publicId)}/status${cancelled ? "?payment=cancelled" : ""}`,
+      ),
+      { credentials: "include" },
+    );
+    const payload = (await response.json().catch(() => null)) as {
+      message?: string;
+      payment?: { checkoutUrl?: string | null; status?: string };
+    } | null;
+    if (!response.ok) {
+      throw new Error(payload?.message || "Unable to update payment");
+    }
+    return payload?.payment;
+  };
+
+  const continuePayment = async (payment: PaymentHistoryItem) => {
+    setActionPaymentId(payment.id);
+    try {
+      const status = await loadPaymentStatus(payment);
+      if (status?.checkoutUrl) {
+        window.location.assign(status.checkoutUrl);
+        return;
+      }
+      router.refresh();
+      toast.error(
+        status?.status === "failed"
+          ? "This payment can no longer be completed. Add the add-on again."
+          : "Stripe Checkout is not available for this payment.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to continue payment");
+    } finally {
+      setActionPaymentId(null);
+    }
+  };
+
+  const cancelPayment = async (payment: PaymentHistoryItem) => {
+    setActionPaymentId(payment.id);
+    try {
+      await loadPaymentStatus(payment, true);
+      router.refresh();
+      toast.success("Pending payment cancelled. You can request the add-on again.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to cancel payment");
+    } finally {
+      setActionPaymentId(null);
+    }
   };
 
   return (
@@ -192,6 +257,7 @@ export function PaymentsPage({
                     <TableHead>Type</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -213,6 +279,29 @@ export function PaymentsPage({
                         <Badge variant="outline" className={statusClass(payment.status)}>
                           {payment.statusLabel}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {canActOnPayment(payment.status) ? (
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={actionPaymentId === payment.id}
+                              onClick={() => void continuePayment(payment)}
+                            >
+                              {actionPaymentId === payment.id ? "Checking..." : "Continue payment"}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={actionPaymentId === payment.id}
+                              onClick={() => void cancelPayment(payment)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   ))}

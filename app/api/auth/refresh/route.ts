@@ -6,7 +6,7 @@ import { appPath, appRoutes } from "@/lib/routes"
 
 export const dynamic = "force-dynamic"
 
-const AUTH_REFRESH_TIMEOUT_MS = 4_000
+const AUTH_REFRESH_TIMEOUT_MS = 10_000
 
 async function refresh(request: NextRequest) {
   const current = request.headers.get("cookie")

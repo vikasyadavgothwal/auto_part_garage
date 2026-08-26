@@ -14,6 +14,11 @@ export function UpcomingTodayCard({ appointments }: UpcomingTodayCardProps) {
         </h3>
 
         <div className="space-y-3">
+          {appointments.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border bg-background p-4 text-sm text-brand-muted">
+              No upcoming appointments today.
+            </div>
+          ) : null}
           {appointments.map((item) => (
             <div
               key={`${item.time}-${item.customer}`}

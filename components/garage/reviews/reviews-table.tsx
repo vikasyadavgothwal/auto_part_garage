@@ -109,7 +109,6 @@ export function ReviewsTable({ reviews, pagination }: ReviewsTableProps) {
                 <TableHead className={tableHeadLeftClass}>Review ID</TableHead>
                 <TableHead className={tableHeadLeftClass}>Date</TableHead>
                 <TableHead className={tableHeadLeftClass}>Customer</TableHead>
-                <TableHead className={tableHeadLeftClass}>Service</TableHead>
                 <TableHead className={tableHeadLeftClass}>Rating</TableHead>
                 <TableHead className={tableHeadLeftClass}>Comment</TableHead>
                 <TableHead className={tableHeadLeftClass}>Reply</TableHead>
@@ -121,7 +120,7 @@ export function ReviewsTable({ reviews, pagination }: ReviewsTableProps) {
             <TableBody>
               {reviews.length === 0 ? (
                 <TableRow className={tableRowClass}>
-                  <TableCell className={tableCellMutedClass} colSpan={9}>
+                  <TableCell className={tableCellMutedClass} colSpan={8}>
                     No reviews yet.
                   </TableCell>
                 </TableRow>
@@ -141,10 +140,6 @@ export function ReviewsTable({ reviews, pagination }: ReviewsTableProps) {
 
                   <TableCell className={tableCellMutedClass}>
                     {review.customer}
-                  </TableCell>
-
-                  <TableCell className={tableCellMutedClass}>
-                    {review.service}
                   </TableCell>
 
                   <TableCell className={tableCellMutedClass}>
@@ -198,7 +193,7 @@ export function ReviewsTable({ reviews, pagination }: ReviewsTableProps) {
           <DialogHeader>
             <DialogTitle>{selectedReview?.actionLabel}</DialogTitle>
             <DialogDescription>
-              Reply to {selectedReview?.customer} about {selectedReview?.service}.
+              Reply to {selectedReview?.customer}.
             </DialogDescription>
           </DialogHeader>
 

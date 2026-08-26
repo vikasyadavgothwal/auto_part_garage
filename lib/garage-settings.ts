@@ -116,9 +116,14 @@ export const formFromProfile = (
   galleryImageKeys: profile.galleryImageKeys,
 })
 
-export const payloadFromForm = (form: GarageProfileFormValues) => ({
-  ...form,
-  certifications: form.certifications
-    .map((value) => value.trim())
-    .filter(Boolean),
-})
+export const payloadFromForm = (form: GarageProfileFormValues) => {
+  const payload: Partial<GarageProfileFormValues> = { ...form }
+  delete payload.mobile
+
+  return {
+    ...payload,
+    certifications: form.certifications
+      .map((value) => value.trim())
+      .filter(Boolean),
+  }
+}

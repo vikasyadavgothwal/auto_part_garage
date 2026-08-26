@@ -14,6 +14,14 @@ import { appPath, appRoutes } from "@/lib/routes"
 
 export const dynamic = "force-dynamic"
 
+const staffLandingRoutes = [
+  ["bookings", appRoutes.bookings],
+  ["schedule", appRoutes.schedule],
+  ["services", appRoutes.services],
+  ["reviews", appRoutes.reviews],
+  ["reports", appRoutes.reports],
+] as const
+
 type GarageDashboardPageProps = {
   searchParams?: Promise<{ payment?: string; session_id?: string }>
 }
@@ -32,6 +40,10 @@ export default async function GarageDashboardPage({ searchParams }: GarageDashbo
   const canServices = access.canView("services")
   const canReviews = access.canView("reviews")
   const canReports = access.canView("reports")
+  const staffLandingRoute = staffLandingRoutes.find(([menu]) => access.canView(menu))?.[1]
+  if (!access.isOwner && staffLandingRoute) {
+    redirect(appPath(staffLandingRoute))
+  }
   const canSeeOperations = access.isOwner || canBookings || canSchedule || canServices || canReviews || canReports
   const dashboardPageData = canSeeOperations ? await getGarageDashboardData() : null
 

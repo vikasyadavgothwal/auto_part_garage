@@ -1,6 +1,5 @@
 import { BookingStats } from "@/components/garage/bookings/booking-stats"
 import { BookingsTable } from "@/components/garage/bookings/bookings-table"
-import { CalendarViewCard } from "@/components/garage/bookings/calendar-view-card"
 import { AccessRestrictedCard } from "@/components/garage/shared/access-restricted-card"
 import { PageHeading } from "@/components/garage/shared/page-heading"
 import { getGarageBusinessAccess } from "@/lib/business-access.server"
@@ -41,7 +40,6 @@ export default async function GarageBookingsPage({
         bookings={tableData.bookings}
         pagination={tablePage.pagination}
       />
-      <CalendarViewCard calendarView={bookingsPageData.calendarView} />
     </div>
   )
 }

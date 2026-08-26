@@ -34,7 +34,7 @@ export type GarageServiceFormValues = {
   name: string
   category: string
   durationMinutes: number
-  price: number
+  price: number | ""
   status: GarageServiceStatus
 }
 

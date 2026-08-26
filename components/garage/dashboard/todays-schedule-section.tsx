@@ -30,7 +30,7 @@ export function TodaysScheduleSection({
     <section>
       <SectionHeader
         title="Today's Schedule"
-        actionLabel="View Full Calendar"
+        actionLabel="View schedule"
         href={appRoutes.schedule}
         className="mb-4"
       />

@@ -54,7 +54,7 @@ const emptyForm: GarageServiceFormValues = {
   name: "",
   category: "",
   durationMinutes: 30,
-  price: 0,
+  price: "",
   status: "active",
 }
 
@@ -78,8 +78,8 @@ const validateServiceForm = (form: GarageServiceFormValues) => {
   if (!Number.isInteger(form.durationMinutes) || form.durationMinutes < 1 || form.durationMinutes > 1440) {
     return "Duration must be a whole number between 1 and 1440 minutes"
   }
-  if (!Number.isFinite(form.price) || form.price < 0 || form.price > 999999) {
-    return "Price must be between 0 and 999999"
+  if (form.price === "" || !Number.isFinite(form.price) || form.price <= 0 || form.price > 999999) {
+    return "Price must be greater than 0 and no more than 999999"
   }
   return ""
 }
@@ -157,7 +157,9 @@ export function ServicesManager({
           ? (sanitizedValue as GarageServiceStatus)
           : field === "name" || field === "category"
             ? sanitizedValue
-            : Number(sanitizedValue),
+            : sanitizedValue === ""
+              ? ""
+              : Number(sanitizedValue),
     }))
   }
 
@@ -186,6 +188,7 @@ export function ServicesManager({
             ...form,
             name: form.name.trim(),
             category: form.category.trim(),
+            price: Number(form.price),
           }),
         },
       )
@@ -312,10 +315,10 @@ export function ServicesManager({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>{editingService ? "Edit service" : "Add service"}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-2xl">{editingService ? "Edit service" : "Add service"}</DialogTitle>
+            {/* <DialogDescription>
               {editingService ? editingService.id : "New service"}
-            </DialogDescription>
+            </DialogDescription> */}
           </DialogHeader>
 
           <form className="space-y-4" onSubmit={saveService} noValidate>

@@ -110,10 +110,6 @@ export type BookingsPageData = {
       | "cancelled"
     statusClass: string
   }>
-  calendarView: {
-    title: string
-    description: string
-  }
 }
 
 export type ServicesPageData = {
@@ -470,10 +466,6 @@ export const bookingsPageData: BookingsPageData = {
         "border-brand-warning/20 bg-brand-warning/10 text-brand-warning hover:bg-brand-warning/10",
     },
   ],
-  calendarView: {
-    title: "Calendar View",
-    description: "Full calendar view with drag-and-drop scheduling coming soon.",
-  },
 }
 
 export const servicesPageData: ServicesPageData = {

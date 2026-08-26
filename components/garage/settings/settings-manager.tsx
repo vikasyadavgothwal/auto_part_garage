@@ -20,6 +20,7 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { authenticatedFetch } from "@/lib/auth/client"
@@ -247,6 +248,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [isSendingOtp, setIsSendingOtp] = useState(false)
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
+  const [isMobileVerificationOpen, setIsMobileVerificationOpen] = useState(false)
   const [isUploadingGarageImage, setIsUploadingGarageImage] = useState(false)
   const [isUploadingGallery, setIsUploadingGallery] = useState(false)
   const [pendingGarageImage, setPendingGarageImage] = useState<PendingImage | null>(null)
@@ -355,15 +357,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     if (form.contactEmail.length > MAX_EMAIL_LENGTH) {
       return `Email must be ${MAX_EMAIL_LENGTH} characters or fewer`
     }
-    if (!form.mobile.trim()) {
-      return "Mobile is required"
-    }
-    if (mobileLocalNumber.length !== mobileCountryFor(mobileCountryCode).digits) {
-      return `${mobileCountryFor(mobileCountryCode).label} mobile number must be ${mobileCountryFor(mobileCountryCode).digits} digits`
-    }
-    if (!MOBILE_PATTERN.test(form.mobile)) {
-      return "Enter a valid mobile number"
-    }
     if (!form.garageName.trim()) {
       return "Garage name is required"
     }
@@ -437,6 +430,15 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
         return `${day} close time must be after open time`
       }
     }
+    return ""
+  }
+
+  const validateMobileForOtp = () => {
+    if (!form.mobile) return "Enter a mobile number before verification"
+    if (mobileLocalNumber.length !== mobileCountryFor(mobileCountryCode).digits) {
+      return `${mobileCountryFor(mobileCountryCode).label} mobile number must be ${mobileCountryFor(mobileCountryCode).digits} digits`
+    }
+    if (!MOBILE_PATTERN.test(form.mobile)) return "Enter a valid mobile number"
     return ""
   }
 
@@ -573,15 +575,10 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
   const sendMobileOtp = async () => {
     setError("")
-    const validationError = validateForm()
+    const validationError = validateMobileForOtp()
     if (validationError) {
       setError(validationError)
       toast.error(validationError)
-      return
-    }
-    if (!form.mobile) {
-      setError("Enter a mobile number before verification")
-      toast.error("Enter a mobile number before verification")
       return
     }
 
@@ -624,7 +621,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       }
       setMobileVerificationId(verificationId)
       setOtp("")
-      toast.success("OTP sent by Firebase")
+      toast.success("Garage OTP sent by Firebase")
     } catch (sendError) {
       logFirebasePhoneError(sendError)
       const errorMessage = getFirebasePhoneErrorMessage(sendError)
@@ -632,6 +629,26 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       toast.error(errorMessage)
     } finally {
       setIsSendingOtp(false)
+    }
+  }
+
+  const openMobileVerification = () => {
+    const validationError = validateMobileForOtp()
+    if (validationError) {
+      setError(validationError)
+      toast.error(validationError)
+      return
+    }
+    setIsMobileVerificationOpen(true)
+    void sendMobileOtp()
+  }
+
+  const closeMobileVerification = (open: boolean) => {
+    setIsMobileVerificationOpen(open)
+    if (!open) {
+      setOtp("")
+      setMobileVerificationId("")
+      clearRecaptchaVerifier()
     }
   }
 
@@ -671,6 +688,7 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
       syncProfileForm(payload.profile)
       setOtp("")
       setMobileVerificationId("")
+      setIsMobileVerificationOpen(false)
       toast.success("Mobile number verified")
     } catch (verifyError) {
       const errorMessage = getFirebasePhoneErrorMessage(verifyError)
@@ -826,10 +844,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
     Boolean(currentProfile.mobileVerifiedAt) &&
     normalizeMobileValue(form.mobile) ===
       normalizeMobileValue(currentProfile.mobile ?? "")
-  const mobileNeedsSaveBeforeOtp =
-    Boolean(form.mobile) &&
-    normalizeMobileValue(form.mobile) !==
-      normalizeMobileValue(currentProfile.mobile ?? "")
   const hasPendingImages = Boolean(pendingGarageImage || pendingGalleryImages.length)
   const pendingUploadSize = imageUploadSize(pendingGarageImage, pendingGalleryImages)
 
@@ -839,9 +853,6 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
         <h1 className="mb-2 text-3xl font-bold text-foreground">
           Workspace Settings
         </h1>
-        <p className="text-brand-muted">
-          Manage garage profile, contact verification, working schedule, and media.
-        </p>
       </div>
       <div id="garage-mobile-recaptcha" />
 
@@ -886,12 +897,16 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="mobile">Mobile <span className="text-destructive">*</span></Label>
+              <Label htmlFor="mobile">Mobile</Label>
               {mobileVerified ? (
                 <Badge className="bg-brand-success/10 text-brand-success">
                   Verified
                 </Badge>
-              ) : null}
+              ) : (
+                <Badge variant="outline" className="border-yellow-500/30 bg-yellow-500/10 text-yellow-500">
+                  Unverified
+                </Badge>
+              )}
             </div>
             <div className="flex min-w-0">
               <select
@@ -921,53 +936,70 @@ export function SettingsManager({ profile }: SettingsManagerProps) {
                 inputMode="numeric"
                 autoComplete="tel-national"
                 maxLength={mobileCountryFor(mobileCountryCode).digits}
-                required
                 placeholder="Mobile number"
                 className="h-11 min-w-0 rounded-l-none border-l-0 border-border bg-brand-surface"
               />
             </div>
             {!mobileVerified ? (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={sendMobileOtp}
-                  disabled={isSendingOtp || isSaving}
-                  className="gap-2"
-                >
-                  <MessageSquareText className="size-4" />
-                  {isSendingOtp
-                    ? mobileNeedsSaveBeforeOtp
-                      ? "Saving..."
-                      : "Sending..."
-                    : mobileNeedsSaveBeforeOtp
-                      ? "Save & Send OTP"
-                      : "Send OTP"}
-                </Button>
-                <Input
-                  value={otp}
-                  onChange={(event) => setOtp(normalizeDigits(event.target.value, 6))}
-                  placeholder="Enter 6-digit OTP"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  className="h-9 border-border bg-brand-surface sm:max-w-32"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={verifyMobileOtp}
-                  disabled={isVerifyingOtp || !otp.trim()}
-                  className="gap-2"
-                >
-                  <CheckCircle2 className="size-4" />
-                  Verify
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={openMobileVerification}
+                disabled={isSendingOtp || isSaving}
+                className="gap-2"
+              >
+                <MessageSquareText className="size-4" />
+                {isSendingOtp ? "Sending OTP..." : "Verify mobile"}
+              </Button>
             ) : null}
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isMobileVerificationOpen} onOpenChange={closeMobileVerification}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Verify mobile number</DialogTitle>
+            <DialogDescription>
+              Enter the OTP sent to {form.mobile || "your mobile number"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4">
+            <Label htmlFor="mobile-otp">OTP <span className="text-destructive">*</span></Label>
+            <Input
+              id="mobile-otp"
+              value={otp}
+              onChange={(event) => setOtp(normalizeDigits(event.target.value, 6))}
+              placeholder="Enter 6-digit OTP"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              className="h-11 border-border bg-brand-surface"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={sendMobileOtp}
+              disabled={isSendingOtp || isVerifyingOtp}
+              className="gap-2"
+            >
+              <MessageSquareText className="size-4" />
+              {isSendingOtp ? "Sending..." : "Resend OTP"}
+            </Button>
+            <Button
+              type="button"
+              onClick={verifyMobileOtp}
+              disabled={isVerifyingOtp || otp.length !== 6}
+              className="gap-2"
+            >
+              <CheckCircle2 className="size-4" />
+              {isVerifyingOtp ? "Verifying..." : "Verify OTP"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Card className="rounded-lg border border-border bg-brand-panel shadow-none">
         <CardHeader>

@@ -90,7 +90,10 @@ const remainingBookingAmount = (booking: GarageBookingRecord) =>
     ? Math.max(0, booking.price - (booking.advanceAmount ?? 0))
     : booking.price
 
-const todayKey = () => new Date().toISOString().slice(0, 10)
+const dateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+
+const todayKey = () => dateKey(new Date())
 
 const weekRange = (weekOffset = 0) => {
   const today = new Date()
@@ -336,11 +339,14 @@ export function buildSchedulePageData(
     ],
     timeSlots,
     appointments,
-    upcomingToday: todayBookings.filter((booking) => booking.bookingTime).map((booking) => ({
-      time: booking.bookingTime ?? "",
-      duration: `${booking.durationMinutes} min`,
-      customer: booking.customerName,
-      service: booking.serviceName,
-    })),
+    upcomingToday: todayBookings
+      .filter((booking) => booking.bookingTime)
+      .sort((first, second) => (first.bookingTime ?? "").localeCompare(second.bookingTime ?? ""))
+      .map((booking) => ({
+        time: booking.bookingTime ?? "",
+        duration: `${booking.durationMinutes} min`,
+        customer: booking.customerName,
+        service: booking.serviceName,
+      })),
   }
 }

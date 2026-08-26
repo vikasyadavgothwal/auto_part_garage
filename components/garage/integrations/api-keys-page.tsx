@@ -119,7 +119,7 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
         method: "POST",
         credentials: "include",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ businessAccountId: accountId, featureKey: "api.enterprise", paymentSuccessUrl: `${window.location.origin}${appPath("/integrations")}?payment=success&session_id={CHECKOUT_SESSION_ID}`, paymentCancelUrl: `${window.location.origin}${appPath("/integrations")}?payment=cancelled` }),
+        body: JSON.stringify({ businessAccountId: accountId, featureKey: "api.enterprise", paymentSuccessUrl: `${window.location.origin}${appPath("/payments")}?payment=success&session_id={CHECKOUT_SESSION_ID}`, paymentCancelUrl: `${window.location.origin}${appPath("/payments")}?payment=cancelled` }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || payload?.ok === false) throw new Error(payload?.message ?? "Unable to request Enterprise API access")
@@ -128,7 +128,7 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
         return
       }
       setEnterpriseRequested(true)
-      toast.success("Enterprise API access request sent to Admin")
+      toast.success("Enterprise API add-on request sent")
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to request Enterprise API access")
     } finally {
@@ -159,13 +159,13 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
 
       {notice ? <Card className="border-amber-500/30 bg-amber-500/10"><CardContent className="p-4 text-sm text-amber-700">{notice}</CardContent></Card> : null}
 
-      {apiAccess?.allowed && apiAccess.apiTier === "standard" ? <Card className="border-primary/30 bg-primary/5"><CardContent className="flex flex-wrap items-center justify-between gap-4 p-4"><div><p className="font-medium">Need higher API capacity?</p><p className="mt-1 text-sm text-muted-foreground">Request Enterprise API access to increase each API key from 120 to 600 requests per minute.</p></div><Button type="button" disabled={requestingEnterprise || enterpriseRequested} onClick={() => void requestEnterpriseApi()}>{requestingEnterprise ? "Requesting..." : enterpriseRequested ? "Request sent" : "Request Enterprise API access"}</Button></CardContent></Card> : null}
+      {apiAccess?.allowed && apiAccess.apiTier === "standard" ? <Card className="border-primary/30 bg-primary/5"><CardContent className="flex flex-wrap items-center justify-between gap-4 p-4"><div><p className="font-medium">Need higher API capacity?</p><p className="mt-1 text-sm text-muted-foreground">Add Enterprise API access to increase each API key from 120 to 600 requests per minute.</p></div><Button type="button" disabled={requestingEnterprise || enterpriseRequested} onClick={() => void requestEnterpriseApi()}>{requestingEnterprise ? "Adding..." : enterpriseRequested ? "Payment pending" : "Add Enterprise API"}</Button></CardContent></Card> : null}
 
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Create API key</CardTitle>
-          <CardDescription>The full key is shown once. Store it in your server environment, never in frontend JavaScript.</CardDescription>
+          <CardDescription>Create a server-side key for your garage integrations.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={createKey} className="space-y-4">
@@ -202,7 +202,7 @@ export function GarageApiKeysPage({ access }: { access?: BusinessAccess }) {
 
       <Dialog open={Boolean(secret)} onOpenChange={(open) => { if (!open) setSecret("") }}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Copy your API key now</DialogTitle><DialogDescription>This key will not be shown again. Save it in your backend/server environment.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Copy your API key now</DialogTitle><DialogDescription>Use this key only from your backend/server environment.</DialogDescription></DialogHeader>
           <div className="break-all rounded-lg border border-border bg-muted p-4 font-mono text-sm">{secret}</div>
           <DialogFooter><Button type="button" onClick={() => void copyApiKey()}><Copy className="mr-2 h-4 w-4" />Copy key</Button></DialogFooter>
         </DialogContent>

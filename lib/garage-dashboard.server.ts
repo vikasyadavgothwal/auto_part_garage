@@ -10,7 +10,10 @@ import {
 
 const asDate = (value: string) => new Date(`${value}T12:00:00`)
 
-const todayKey = () => new Date().toISOString().slice(0, 10)
+const dateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+
+const todayKey = () => dateKey(new Date())
 
 const formatVehicle = (booking: GarageBookingRecord) =>
   [booking.vehicleYear, booking.vehicleMake, booking.vehicleModel]
@@ -55,7 +58,7 @@ const isWithinLast30Days = (booking: GarageBookingRecord) => {
 const upcomingCutoffKey = () => {
   const cutoff = asDate(todayKey())
   cutoff.setDate(cutoff.getDate() + 7)
-  return cutoff.toISOString().slice(0, 10)
+  return dateKey(cutoff)
 }
 
 const sortByAppointment = (a: GarageBookingRecord, b: GarageBookingRecord) =>
