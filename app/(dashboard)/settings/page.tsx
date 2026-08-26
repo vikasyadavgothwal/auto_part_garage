@@ -19,6 +19,7 @@ async function getSettingsContext() {
   const account = accessPayload?.access?.find((item) => item.businessAccount.type === "Garage")
   return {
     hasBusinessAccess: Boolean(account),
+    isOwner: account?.businessAccount.isOwner ?? false,
   }
 }
 
@@ -27,7 +28,7 @@ export default async function SettingsPage() {
     requireGarageUser(),
     getSettingsContext(),
   ])
-  const profile = context.hasBusinessAccess ? await getGarageSettings() : null
+  const profile = context.hasBusinessAccess && context.isOwner ? await getGarageSettings() : null
 
   if (profile) {
     return (
