@@ -45,7 +45,16 @@ async function getBusinessAccess() {
   const response = await requestBackend("/api/v1/business/access", {
     cookieHeader: (await cookies()).toString(),
   }).catch(() => null)
-  if (!response?.ok) return { visibleMenus: [], planName: null }
+  if (!response?.ok) {
+    return {
+      visibleMenus: [],
+      planName: null,
+      planCode: null,
+      isOwner: false,
+      appointmentUsage: 0,
+      appointmentLimit: null,
+    }
+  }
   const payload = (await response.json()) as BusinessAccessPayload
   const access = payload.access?.find((item) => item.businessAccount.type === "Garage")
   const freePlan = isFreePlan(access?.businessAccount.plan)
