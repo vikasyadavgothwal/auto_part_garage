@@ -350,7 +350,7 @@ export function ServicesManager({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="service-duration">Duration <span className="text-destructive">*</span></Label>
+                <Label htmlFor="service-duration">Duration (minutes) <span className="text-destructive">*</span></Label>
                 <Input
                   id="service-duration"
                   type="number"

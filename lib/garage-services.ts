@@ -70,7 +70,7 @@ export const formatGarageService = (
   id: service.publicId,
   name: service.name,
   category: service.category,
-  duration: `${service.durationMinutes} min`,
+  duration: `${service.durationMinutes} minutes`,
   durationMinutes: service.durationMinutes,
   price: formatMoney(service.price, service.currency),
   priceValue: service.price / 100,

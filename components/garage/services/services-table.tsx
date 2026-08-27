@@ -162,7 +162,7 @@ export function ServicesTable({
                   Service Name
                 </TableHead>
                 <TableHead className={tableHeadLeftClass}>Category</TableHead>
-                <TableHead className={tableHeadLeftClass}>Duration</TableHead>
+                <TableHead className={tableHeadLeftClass}>Duration (minutes)</TableHead>
                 <TableHead className={tableHeadLeftClass}>Price</TableHead>
                 <TableHead className={tableHeadLeftClass}>Bookings</TableHead>
                 <TableHead className={tableHeadLeftClass}>Reviews</TableHead>
